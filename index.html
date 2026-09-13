@@ -5,7 +5,28 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sanam Finance Portal</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css">
+<style>
+:root{--nav:#0f2740;--nav2:#183a5b;--bg:#f3f5f8;--card:#fff;--text:#172033;--muted:#667085;--border:#d7dde5;--blue:#315c87;--green:#1f7a5a;--amber:#a66a16;--red:#a43f3f}
+*{box-sizing:border-box} body{margin:0;font-family:"Dubai","Segoe UI","Noto Sans Arabic",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit} .hidden{display:none!important}
+.auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(145deg,#eef2f6,#fff)}
+.auth-card{width:min(460px,100%);background:white;border:1px solid var(--border);padding:26px;border-radius:12px;box-shadow:0 12px 30px rgba(15,39,64,.08)}
+.auth-card h1{font-size:22px;margin:0 0 6px} .muted{color:var(--muted);font-size:13px} label{display:block;font-size:13px;margin-bottom:5px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--border);border-radius:7px;background:#fff}
+.btn{border:1px solid var(--border);background:#fff;padding:8px 12px;border-radius:7px;cursor:pointer}.btn.primary{background:var(--nav);color:#fff;border-color:var(--nav)}.btn.success{background:var(--green);color:white;border-color:var(--green)}.btn.danger{background:var(--red);color:#fff;border-color:var(--red)}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}.side{background:var(--nav);color:#fff;padding:18px 12px}.brand{padding:8px 10px 18px;border-bottom:1px solid rgba(255,255,255,.15);margin-bottom:12px}.brand b{display:block;font-size:17px}.brand small{opacity:.7}
+.nav{width:100%;text-align:right;background:transparent;color:#fff;border:0;padding:11px 12px;border-radius:6px;cursor:pointer;margin:2px 0}.nav:hover,.nav.active{background:var(--nav2)}
+.main{min-width:0}.top{height:64px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:10}.content{padding:20px}
+.section{display:none}.section.active{display:block}.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card{background:#fff;border:1px solid var(--border);border-radius:9px;padding:16px}.kpi b{font-size:23px;display:block;margin-top:5px}.kpi span{font-size:12px;color:var(--muted)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.filters>*{width:auto;min-width:160px}
+.table-wrap{overflow:auto;background:#fff;border:1px solid var(--border);border-radius:8px}table{width:100%;border-collapse:collapse;min-width:820px}th,td{padding:10px;border-bottom:1px solid var(--border);font-size:13px;text-align:right;white-space:nowrap}th{background:#f8fafc;color:#475467}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;background:#eef2f6}.green{background:#eaf5ef;color:#176545}.amber{background:#fff4df;color:#8a570d}.red{background:#fdecec;color:#922f2f}
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:100}.modal-bg.show{display:flex}.modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:10px;padding:18px}.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.note{padding:10px 12px;background:#f8fafc;border:1px solid var(--border);border-radius:7px;font-size:12px;color:#475467}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{display:none}.g4,.g2{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.g4,.g2,.modal-grid{grid-template-columns:1fr}.content{padding:12px}}
+</style>
 </head>
 <body>
 <div id="authScreen" class="auth">
@@ -23,80 +44,43 @@
   </div>
 </div>
 <div id="app" class="app hidden">
-  <aside class="side">
-    <div class="brand"><b>مركز التحكم المالي</b><small>Sanam Finance Portal</small></div>
-    <button class="nav active" data-page="dashboard">لوحة المعلومات</button>
-    <button class="nav" data-page="banks">السيولة والبنوك</button>
-    <button class="nav" data-page="payments">المدفوعات والاعتمادات</button>
-    <button class="nav" data-page="posted">المدفوعات المرحلة</button>
-    <button class="nav" data-page="tasks">المهام</button>
-    <button class="nav" data-page="close">الإقفال الشهري</button>
-    <button class="nav" data-page="imprest">العهد</button>
-    <button class="nav" data-page="performance">أداء الفريق</button>
-    <button class="nav" data-page="ownership">مصفوفة المسؤوليات</button>
-    <button class="nav" data-page="exceptions">الاستثناءات والإجازات</button>
-    <button class="nav" data-page="audit">سجل العمليات</button>
-  </aside>
-  <main class="main">
-    <div class="top">
-      <div><b id="pageTitle">لوحة المعلومات</b><div id="userRole" class="muted"></div></div>
-      <button id="logoutBtn" class="btn">تسجيل الخروج</button>
-    </div>
-    <div class="content">
-      <section id="dashboard" class="section active">
-        <div class="grid g4">
-          <div class="card kpi"><span>إجمالي الأرصدة</span><b id="kpiBalance">—</b></div>
-          <div class="card kpi"><span>الرصيد المحجوز</span><b id="kpiReserved">—</b></div>
-          <div class="card kpi"><span>السيولة المتاحة</span><b id="kpiAvailable">—</b></div>
-          <div class="card kpi"><span>بانتظار CFO</span><b id="kpiCfo">—</b></div>
-        </div>
-        <div class="card" style="margin-top:14px"><h3 style="margin-top:0">التنبيهات الحالية</h3><div id="dashboardAlerts" class="muted">لا توجد بيانات بعد.</div></div>
-      </section>
-      <section id="banks" class="section">
-        <div class="row" style="margin-bottom:12px"><h3>السيولة والبنوك</h3><button id="addBankBtn" class="btn primary" type="button" onclick="openBankModal()">+ إضافة حساب</button></div>
-        <div class="note" style="margin-bottom:12px">الرصيد المحجوز يُحتسب تلقائياً من المدفوعات غير المنفذة المرتبطة بالحساب البنكي ولا يمكن إدخاله يدويًا.</div>
-        <div class="table-wrap"><table><thead><tr><th>الشركة</th><th>البنك</th><th>الحساب</th><th>الرصيد</th><th>المحجوز</th><th>المتاح</th><th>آخر تحديث</th><th>إجراء</th></tr></thead><tbody id="banksBody"></tbody></table></div>
-      </section>
-      <section id="payments" class="section">
-        <div class="row" style="margin-bottom:12px"><h3>المدفوعات والاعتمادات</h3><button id="addPaymentBtn" class="btn primary" type="button" onclick="openPaymentModal()">+ إضافة دفعة</button></div>
-        <div class="table-wrap"><table><thead><tr><th>الاستحقاق</th><th>الشركة</th><th>المستفيد</th><th>المبلغ</th><th>الحساب</th><th>المشرف</th><th>CFO</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="paymentsBody"></tbody></table></div>
-      </section>
-      <section id="posted" class="section">
-        <div class="row" style="margin-bottom:12px"><h3>المدفوعات المرحلة</h3></div>
-        <div class="table-wrap"><table><thead><tr><th>تاريخ الترحيل</th><th>الشركة</th><th>المستفيد</th><th>المبلغ</th><th>الحساب</th><th>الغرض</th></tr></thead><tbody id="postedBody"></tbody></table></div>
-      </section>
-      <section id="tasks" class="section">
-        <div class="row" style="margin-bottom:12px"><h3>المهام</h3><button id="addTaskBtn" class="btn primary" type="button" onclick="openTaskModal()">+ إضافة مهمة</button></div>
-        <div class="table-wrap"><table><thead><tr><th>المهمة</th><th>المسؤول</th><th>المراجع</th><th>الموعد</th><th>الأولوية</th><th>الحالة</th></tr></thead><tbody id="tasksBody"></tbody></table></div>
-      </section>
-      <section id="close" class="section">
-        <div class="row" style="margin-bottom:12px"><h3>الإقفال الشهري</h3><button id="addCloseBtn" class="btn primary" type="button" onclick="openCloseModal()">+ إضافة بند إقفال</button></div>
-        <div class="table-wrap"><table><thead><tr><th>المسار</th><th>الرمز</th><th>البند</th><th>المسؤول</th><th>الإنجاز</th><th>الحالة</th></tr></thead><tbody id="closeBody"></tbody></table></div>
-      </section>
-      <section id="imprest" class="section">
-        <div class="row" style="margin-bottom:12px"><h3>العهد</h3><button id="addImprestBtn" class="btn primary" type="button" onclick="openImprestModal()">+ إضافة عهدة</button></div>
-        <div class="table-wrap"><table><thead><tr><th>النوع</th><th>الشركة</th><th>العهدة</th><th>المسؤول</th><th>الرصيد</th><th>غير مسوى</th><th>العمر</th><th>الحالة</th></tr></thead><tbody id="imprestBody"></tbody></table></div>
-      </section>
-      <section id="performance" class="section">
-        <div class="row" style="margin-bottom:12px"><h3>أداء الفريق</h3></div>
-        <div id="performanceGrid" class="grid g2"></div>
-      </section>
-      <section id="ownership" class="section">
-        <div class="row" style="margin-bottom:12px"><h3>مصفوفة المسؤوليات</h3></div>
-        <div class="table-wrap"><table><thead><tr><th>العملية</th><th>النشاط</th><th>التكرار</th><th>المالك</th><th>المراجع</th><th>المعتمد</th><th>المخرج</th></tr></thead><tbody id="ownershipBody"></tbody></table></div>
-      </section>
-      <section id="exceptions" class="section">
-        <div class="row" style="margin-bottom:12px"><h3>الاستثناءات والإجازات</h3><button id="addExceptionBtn" class="btn primary" type="button" onclick="openExceptionModal()">+ إضافة استثناء</button></div>
-        <div id="exceptionsList"></div>
-      </section>
-      <section id="audit" class="section">
-        <div class="row" style="margin-bottom:12px"><h3>سجل العمليات</h3><button class="btn" onclick="loadAudit()">تحديث</button></div>
-        <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>المستخدم</th><th>الإجراء</th><th>الكيان</th><th>المعرف</th></tr></thead><tbody id="auditBody"></tbody></table></div>
-      </section>
-    </div>
-  </main>
-</div>
+  <aside class="side"><div class="brand"><b>مركز التحكم المالي</b><small>Sanam Finance Portal</small></div><button class="nav active" data-page="dashboard">لوحة المعلومات</button><button class="nav" data-page="banks">السيولة والبنوك</button><button class="nav" data-page="payments">المدفوعات والاعتمادات</button><button class="nav" data-page="posted">المدفوعات المرحلة</button><button class="nav" data-page="tasks">المهام</button><button class="nav" data-page="close">الإقفال الشهري</button><button class="nav" data-page="imprest">العهد</button><button class="nav" data-page="performance">أداء الفريق</button><button class="nav" data-page="ownership">مصفوفة المسؤوليات</button><button class="nav" data-page="exceptions">الاستثناءات والإجازات</button><button class="nav" data-page="audit">سجل العمليات</button></aside>
+  <main class="main"><div class="top"><div><b id="pageTitle">لوحة المعلومات</b><div id="userRole" class="muted"></div></div><button id="logoutBtn" class="btn">تسجيل الخروج</button></div><div class="content"><section id="dashboard" class="section active"><div class="grid g4"><div class="card kpi"><span>إجمالي الأرصدة</span><b id="kpiBalance">—</b></div><div class="card kpi"><span>الرصيد المحجوز</span><b id="kpiReserved">—</b></div><div class="card kpi"><span>السيولة المتاحة</span><b id="kpiAvailable">—</b></div><div class="card kpi"><span>بانتظار CFO</span><b id="kpiCfo">—</b></div></div><div class="card" style="margin-top:14px"><h3 style="margin-top:0">التنبيهات الحالية</h3><div id="dashboardAlerts" class="muted">لا توجد بيانات بعد.</div></div></section><section id="banks" class="section"><div class="row" style="margin-bottom:12px"><h3>السيولة والبنوك</h3><button id="addBankBtn" class="btn primary">+ إضافة حساب</button></div><div class="note" style="margin-bottom:12px">الرصيد المحجوز يُحتسب تلقائياً من المدفوعات غير المنفذة المرتبطة بالحساب البنكي ولا يمكن إدخاله يدويًا.</div><div class="table-wrap"><table><thead><tr><th>الشركة</th><th>البنك</th><th>الحساب</th><th>الرصيد</th><th>المحجوز</th><th>المتاح</th><th>آخر تحديث</th><th>إجراء</th></tr></thead><tbody id="banksBody"></tbody></table></div></section><section id="payments" class="section"><div class="row" style="margin-bottom:12px"><h3>المدفوعات والاعتمادات</h3><button id="addPaymentBtn" class="btn primary">+ إضافة دفعة</button></div><div class="table-wrap"><table><thead><tr><th>الاستحقاق</th><th>الشركة</th><th>المستفيد</th><th>المبلغ</th><th>الحساب</th><th>المشرف</th><th>CFO</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="paymentsBody"></tbody></table></div></section><section id="posted" class="section"><div class="row" style="margin-bottom:12px"><h3>المدفوعات المرحلة</h3></div><div class="table-wrap"><table><thead><tr><th>تاريخ الترحيل</th><th>الشركة</th><th>المستفيد</th><th>المبلغ</th><th>الحساب</th><th>الغرض</th></tr></thead><tbody id="postedBody"></tbody></table></div></section><section id="tasks" class="section"><div class="row" style="margin-bottom:12px"><h3>المهام</h3><button id="addTaskBtn" class="btn primary">+ إضافة مهمة</button></div><div class="table-wrap"><table><thead><tr><th>المهمة</th><th>المسؤول</th><th>المراجع</th><th>الموعد</th><th>الأولوية</th><th>الحالة</th></tr></thead><tbody id="tasksBody"></tbody></table></div></section><section id="close" class="section"><div class="row" style="margin-bottom:12px"><h3>الإقفال الشهري</h3><button id="addCloseBtn" class="btn primary">+ إضافة بند إقفال</button></div><div class="table-wrap"><table><thead><tr><th>المسار</th><th>الرمز</th><th>البند</th><th>المسؤول</th><th>الإنجاز</th><th>الحالة</th></tr></thead><tbody id="closeBody"></tbody></table></div></section><section id="imprest" class="section"><div class="row" style="margin-bottom:12px"><h3>العهد</h3><button id="addImprestBtn" class="btn primary">+ إضافة عهدة</button></div><div class="table-wrap"><table><thead><tr><th>النوع</th><th>الشركة</th><th>العهدة</th><th>المسؤول</th><th>الرصيد</th><th>غير مسوى</th><th>العمر</th><th>الحالة</th></tr></thead><tbody id="imprestBody"></tbody></table></div></section><section id="performance" class="section"><div class="row" style="margin-bottom:12px"><h3>أداء الفريق</h3></div><div id="performanceGrid" class="grid g2"></div></section><section id="ownership" class="section"><div class="row" style="margin-bottom:12px"><h3>مصفوفة المسؤوليات</h3></div><div class="table-wrap"><table><thead><tr><th>العملية</th><th>النشاط</th><th>التكرار</th><th>المالك</th><th>المراجع</th><th>المعتمد</th><th>المخرج</th></tr></thead><tbody id="ownershipBody"></tbody></table></div></section><section id="exceptions" class="section"><div class="row" style="margin-bottom:12px"><h3>الاستثناءات والإجازات</h3><button id="addExceptionBtn" class="btn primary">+ إضافة استثناء</button></div><div id="exceptionsList"></div></section><section id="audit" class="section"><div class="row" style="margin-bottom:12px"><h3>سجل العمليات</h3><button class="btn" onclick="loadAudit()">تحديث</button></div><div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>المستخدم</th><th>الإجراء</th><th>الكيان</th><th>المعرف</th></tr></thead><tbody id="auditBody"></tbody></table></div></section></div></main></div>
 <div id="modalBg" class="modal-bg"><div class="modal"><div class="row"><h3 id="modalTitle" style="margin:0"></h3><button class="btn" onclick="closeModal()">إغلاق</button></div><div id="modalBody" style="margin-top:14px"></div></div></div>
-<script src="app.js"></script>
-</body>
-</html>
+<script>
+const SUPABASE_URL="https://xpomwrpgxnjxabjnwnuz.supabase.co";const SUPABASE_KEY="sb_publishable_eHa4_cNodmXVKBFo5KYBtw_p1ssc0zq";const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let session=null,profile=null,profiles=[],banks=[],payments=[],tasks=[],exceptions=[],closeTasks=[],imprest=[],performance=[],ownership=[];const ROLE_LABEL={CFO:"المدير المالي",Supervisor:"مشرف الحسابات",BankAccountant:"محاسب البنوك",GLAccountant:"محاسب القيود والتسويات",ARAccountant:"محاسب المبيعات والعملاء",APAccountant:"محاسب الموردين والمشاريع"};const PAGE_ACCESS={CFO:["dashboard","banks","payments","posted","tasks","close","imprest","performance","ownership","exceptions","audit"],Supervisor:["dashboard","banks","payments","posted","tasks","close","imprest","performance","ownership","exceptions"],BankAccountant:["dashboard","banks","payments","posted","tasks","close","imprest","exceptions"],GLAccountant:["dashboard","payments","posted","tasks","close","exceptions"],ARAccountant:["dashboard","tasks","close","performance","exceptions"],APAccountant:["dashboard","payments","posted","tasks","close","imprest","performance","exceptions"]};const money=n=>new Intl.NumberFormat("ar-SA",{style:"currency",currency:"SAR",maximumFractionDigits:0}).format(Number(n||0));const fmt=d=>d?new Date(d).toLocaleString("ar-SA"):"—";const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));function badge(s){let c="";if(["موافق","معتمد للدفع","مرحّل","منفذ"].includes(s))c="green";else if(["معلق","بانتظار مراجعة المشرف","بانتظار اعتماد CFO"].includes(s))c="amber";else if(["مرفوض","موقوف","متأخر"].includes(s))c="red";return `<span class="badge ${c}">${esc(s)}</span>`}function showModal(t,b){modalTitle.textContent=t;modalBody.innerHTML=b;modalBg.classList.add("show")}function closeModal(){modalBg.classList.remove("show")}function val(id){return document.getElementById(id)?.value||""}function input(id,label,value="",type="text"){return `<div><label>${label}</label><input id="${id}" type="${type}" value="${esc(value)}"></div>`}function select(id,label,items,value=""){return `<div><label>${label}</label><select id="${id}">${items.map(x=>`<option value="${esc(x.value??x)}" ${String(x.value??x)===String(value)?'selected':''}>${esc(x.label??x)}</option>`).join("")}</select></div>`}
+function getAuthInput(){const email=loginEmail.value.trim().toLowerCase();const password=loginPassword.value;loginMsg.textContent="";if(!email){loginMsg.textContent="أدخل بريد العمل.";return null}if(!password||password.length<8){loginMsg.textContent="كلمة المرور يجب أن تكون 8 خانات على الأقل.";return null}if(!/\p{L}/u.test(password)||!/\d/.test(password)){loginMsg.textContent="كلمة المرور يجب أن تحتوي على حروف وأرقام معًا، ولا يمكن أن تكون حروفًا فقط أو أرقامًا فقط.";return null}return {email,password}}
+async function signInWithPassword(){const x=getAuthInput();if(!x)return;loginBtn.disabled=true;signupBtn.disabled=true;loginMsg.textContent="جارٍ تسجيل الدخول...";const {error}=await sb.auth.signInWithPassword({email:x.email,password:x.password});loginBtn.disabled=false;signupBtn.disabled=false;if(error)loginMsg.textContent="تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور."}
+async function firstUseSignup(){const x=getAuthInput();if(!x)return;loginBtn.disabled=true;signupBtn.disabled=true;loginMsg.textContent="جارٍ تفعيل الحساب...";const {data,error}=await sb.auth.signUp({email:x.email,password:x.password});loginBtn.disabled=false;signupBtn.disabled=false;if(error){const m=String(error.message||"").toLowerCase();loginMsg.textContent=m.includes("already")||m.includes("registered")?"الحساب مفعّل مسبقًا. استخدم «تسجيل الدخول».":"تعذر تفعيل الحساب. تأكد أن البريد ضمن الفريق المعتمد.";return}if(data?.session)loginMsg.textContent="تم تفعيل الحساب وتسجيل الدخول.";else loginMsg.textContent="تم تفعيل الحساب."}
+async function init(){loginBtn.onclick=signInWithPassword;signupBtn.onclick=firstUseSignup;logoutBtn.onclick=async()=>{await sb.auth.signOut();location.reload()};document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>openPage(b.dataset.page,b.textContent));addBankBtn.onclick=openBankModal;addPaymentBtn.onclick=openPaymentModal;addTaskBtn.onclick=openTaskModal;addExceptionBtn.onclick=openExceptionModal;addCloseBtn.onclick=openCloseModal;addImprestBtn.onclick=openImprestModal;const {data:{session:s}}=await sb.auth.getSession();session=s;sb.auth.onAuthStateChange(async(_e,s2)=>{session=s2;if(s2)await enterApp();else showAuth()});if(session)await enterApp();else showAuth()}
+function showAuth(){authScreen.classList.remove("hidden");app.classList.add("hidden")}async function enterApp(){const {data:u}=await sb.from("profiles").select("*").eq("id",session.user.id).maybeSingle();if(!u){showAuth();loginMsg.textContent="الحساب غير مصرح أو لم يكتمل إنشاؤه.";return}profile=u;authScreen.classList.add("hidden");app.classList.remove("hidden");userRole.textContent=`${profile.full_name} — ${ROLE_LABEL[profile.role]||profile.role}`;applyAccess();await reloadAll()}function applyAccess(){const allowed=PAGE_ACCESS[profile.role]||[];document.querySelectorAll(".nav").forEach(b=>b.classList.toggle("hidden",!allowed.includes(b.dataset.page)));addBankBtn.classList.toggle("hidden",!["CFO","Supervisor","BankAccountant"].includes(profile.role));addPaymentBtn.classList.toggle("hidden",!["CFO","Supervisor","BankAccountant","APAccountant"].includes(profile.role));addTaskBtn.classList.toggle("hidden",!["CFO","Supervisor"].includes(profile.role));addExceptionBtn.classList.toggle("hidden",profile.role!=="CFO");addCloseBtn.classList.toggle("hidden",!["CFO","Supervisor"].includes(profile.role));addImprestBtn.classList.toggle("hidden",!["CFO","Supervisor","BankAccountant","APAccountant"].includes(profile.role))}function openPage(id,title){if(!(PAGE_ACCESS[profile.role]||[]).includes(id))return;document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));document.querySelector(`.nav[data-page="${id}"]`)?.classList.add("active");pageTitle.textContent=title;if(id==="audit")loadAudit()}
+async function reloadAll(){const [pr,bk,py,tk,ex,cl,im,pf,ow]=await Promise.all([sb.from("profiles").select("id,email,full_name,role").eq("active",true),sb.from("bank_liquidity").select("*").order("company"),sb.from("payments").select("*,bank_accounts(company,bank_name,account_name)").order("created_at",{ascending:false}),sb.from("tasks").select("*,owner:profiles!tasks_owner_id_fkey(full_name),reviewer:profiles!tasks_reviewer_id_fkey(full_name)").order("created_at",{ascending:false}),sb.from("exceptions").select("*,owner:profiles!exceptions_owner_id_fkey(full_name),leave_delegations(*,absent:profiles!leave_delegations_absent_user_id_fkey(full_name),substitute:profiles!leave_delegations_substitute_user_id_fkey(full_name))").order("created_at",{ascending:false}),sb.from("monthly_close_tasks").select("*,owner:profiles(full_name)").order("code"),sb.from("imprest_funds").select("*,custodian:profiles(full_name)").order("created_at",{ascending:false}),sb.from("team_performance").select("*,user:profiles(full_name,role)").order("updated_at",{ascending:false}),sb.from("ownership_matrix").select("*").order("sort_order")]);profiles=pr.data||[];banks=bk.data||[];payments=py.data||[];tasks=tk.data||[];exceptions=ex.data||[];closeTasks=cl.data||[];imprest=im.data||[];performance=pf.data||[];ownership=ow.data||[];renderAll()}
+function renderAll(){renderBanks();renderPayments();renderTasks();renderClose();renderImprest();renderPerformance();renderOwnership();renderExceptions();renderDashboard()}function renderDashboard(){const bal=banks.reduce((s,b)=>s+Number(b.balance||0),0),res=banks.reduce((s,b)=>s+Number(b.reserved_balance||0),0);kpiBalance.textContent=money(bal);kpiReserved.textContent=money(res);kpiAvailable.textContent=money(bal-res);kpiCfo.textContent=payments.filter(p=>p.supervisor_status==="موافق"&&p.cfo_status==="معلق").length;dashboardAlerts.textContent="لا توجد تنبيهات حالية."}
+function renderBanks(){banksBody.innerHTML=banks.map(b=>`<tr><td>${esc(b.company)}</td><td>${esc(b.bank_name)}</td><td>${esc(b.account_name)}</td><td>${money(b.balance)}</td><td>${money(b.reserved_balance)}</td><td>${money(b.available_balance)}</td><td>${fmt(b.updated_at)}</td><td>عرض</td></tr>`).join("")}function openBankModal(){return}async function saveBank(){return}
+function bankLabel(p){const b=p.bank_accounts;return b?`${b.bank_name} — ${b.account_name}`:"—"}function renderPayments(){const active=payments.filter(p=>p.status!=="مرحّل"),posted=payments.filter(p=>p.status==="مرحّل");paymentsBody.innerHTML=active.map(p=>`<tr><td>${esc(p.due_date)}</td><td>${esc(p.company)}</td><td>${esc(p.beneficiary)}</td><td>${money(p.amount)}</td><td>${esc(bankLabel(p))}</td><td>${badge(p.supervisor_status)}</td><td>${badge(p.cfo_status)}</td><td>${badge(p.status)}</td><td>عرض</td></tr>`).join("");postedBody.innerHTML=posted.map(p=>`<tr><td>${fmt(p.posted_at)}</td><td>${esc(p.company)}</td><td>${esc(p.beneficiary)}</td><td>${money(p.amount)}</td><td>${esc(bankLabel(p))}</td><td>${esc(p.purpose||"—")}</td></tr>`).join("")}function openPaymentModal(){return}function renderTasks(){tasksBody.innerHTML=tasks.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.owner?.full_name||"—")}</td><td>${esc(t.reviewer?.full_name||"—")}</td><td>${esc(t.due_date||"—")}</td><td>${badge(t.priority||"عادي")}</td><td>${badge(t.status||"لم يبدأ")}</td></tr>`).join("")}function openTaskModal(){return}function renderClose(){closeBody.innerHTML=closeTasks.map(x=>`<tr><td>${esc(x.track)}</td><td>${esc(x.code||"—")}</td><td>${esc(x.name)}</td><td>${esc(x.owner?.full_name||"—")}</td><td>${Number(x.progress||0)}%</td><td>${badge(x.status)}</td></tr>`).join("")}function openCloseModal(){return}function renderImprest(){imprestBody.innerHTML=imprest.map(x=>`<tr><td>${esc(x.type)}</td><td>${esc(x.company)}</td><td>${esc(x.name)}</td><td>${esc(x.custodian?.full_name||"—")}</td><td>${money(x.balance)}</td><td>${money(x.unsettled)}</td><td>${Number(x.aging||0)} يوم</td><td>${badge(x.status)}</td></tr>`).join("")}function openImprestModal(){return}function renderPerformance(){performanceGrid.innerHTML='<div class="muted">لا توجد بيانات أداء بعد.</div>'}function renderOwnership(){ownershipBody.innerHTML=ownership.map(x=>`<tr><td>${esc(x.process)}</td><td>${esc(x.activity)}</td><td>${esc(x.frequency||"—")}</td><td>${esc(x.owner_name)}</td><td>${esc(x.reviewer_name||"—")}</td><td>${esc(x.approver_name||"—")}</td><td>${esc(x.output||"—")}</td></tr>`).join("")}function renderExceptions(){exceptionsList.innerHTML=exceptions.map(e=>`<div class="card" style="margin-bottom:10px"><b>${esc(e.type)}</b><div class="muted">${esc(e.detail||"")}</div></div>`).join("")}function openExceptionModal(){return}async function loadAudit(){return}init();
+</script>
+<script id="sanam-action-button-fix">
+(() => {
+  const bind = (id, fnName) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.pointerEvents = 'auto';
+    el.disabled = false;
+    el.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const fn = window[fnName];
+      if (typeof fn === 'function') fn();
+      else alert('تعذر فتح نافذة الإدخال. يرجى تحديث الصفحة.');
+    }, true);
+  };
+  bind('addBankBtn','openBankModal');
+  bind('addPaymentBtn','openPaymentModal');
+  bind('addTaskBtn','openTaskModal');
+  bind('addCloseBtn','openCloseModal');
+  bind('addImprestBtn','openImprestModal');
+  bind('addExceptionBtn','openExceptionModal');
+})();
+</script>
+
+</body></html>
