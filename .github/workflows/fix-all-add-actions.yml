@@ -1,0 +1,159 @@
+name: Fix all add actions
+
+on:
+  push:
+    branches: [preview-all-add-fixes]
+    paths:
+      - '.github/workflows/fix-all-add-actions.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch add modals and save flows
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          html=p.read_text(encoding='utf-8')
+
+          payment_old='function openPaymentModal(){return}'
+          payment_new=r'''function openPaymentModal(){
+ if(!["CFO","Supervisor","BankAccountant","APAccountant"].includes(profile.role))return;
+ const bankItems=banks.map(b=>({value:b.id,label:`${b.company} — ${b.bank_name} — ${b.account_name}`}));
+ if(!bankItems.length){alert("أضف حساباً بنكياً أولاً من صفحة السيولة والبنوك.");return;}
+ showModal("إضافة دفعة",`<div class="modal-grid">
+ ${input("pyDue","تاريخ الاستحقاق","","date")}
+ ${input("pyCompany","الشركة")}
+ ${input("pyBeneficiary","المستفيد")}
+ ${input("pyAmount","المبلغ","0","number")}
+ ${select("pyBank","حساب البنك",bankItems)}
+ ${select("pyPriority","الأولوية",["عادي","عالي","حرج"])}
+ ${select("pyDocs","حالة المستندات",["مكتملة","ناقصة"])}
+ <div style="grid-column:1/-1">${input("pyPurpose","الغرض من السداد")}</div>
+ </div><div class="row" style="margin-top:14px"><button class="btn primary" onclick="savePayment()">حفظ الدفعة</button></div>`)
+}
+async function savePayment(){
+ const due=val("pyDue"),company=val("pyCompany").trim(),beneficiary=val("pyBeneficiary").trim(),amount=Number(val("pyAmount")),bank=val("pyBank"),purpose=val("pyPurpose").trim();
+ if(!due||!company||!beneficiary||!bank||!(amount>0)){alert("أكمل الحقول الأساسية وتأكد أن المبلغ أكبر من صفر.");return}
+ const payload={due_date:due,company,beneficiary,amount,bank_account_id:bank,purpose,priority:val("pyPriority")||"عادي",documents_status:val("pyDocs")||"مكتملة",requested_by:profile.id};
+ const {error}=await sb.from("payments").insert(payload);
+ if(error){alert("تعذر حفظ الدفعة: "+error.message);return}
+ closeModal();await reloadAll();
+}'''
+
+          task_old='function openTaskModal(){return}'
+          task_new=r'''function openTaskModal(){
+ if(!["CFO","Supervisor"].includes(profile.role))return;
+ const members=profiles.map(x=>({value:x.id,label:`${x.full_name} — ${ROLE_LABEL[x.role]||x.role}`}));
+ showModal("إضافة مهمة",`<div class="modal-grid">
+ ${input("tkName","اسم المهمة")}
+ ${select("tkFrequency","التكرار",["يومي","أسبوعي","شهري","حسب الحاجة"])}
+ ${select("tkOwner","المسؤول",members)}
+ ${select("tkReviewer","المراجع",[{value:"",label:"— بدون مراجع —"},...members])}
+ ${input("tkDue","الموعد","","date")}
+ ${select("tkPriority","الأولوية",["عادي","عالي","حرج"])}
+ ${select("tkStatus","الحالة",["لم يبدأ","قيد التنفيذ","مكتمل","متأخر"])}
+ <div style="grid-column:1/-1">${input("tkOutput","المخرج / التقرير المطلوب")}</div>
+ </div><div class="row" style="margin-top:14px"><button class="btn primary" onclick="saveTask()">حفظ المهمة</button></div>`)
+}
+async function saveTask(){
+ const name=val("tkName").trim(),owner=val("tkOwner");if(!name||!owner){alert("أدخل اسم المهمة وحدد المسؤول.");return}
+ const payload={name,frequency:val("tkFrequency")||null,owner_id:owner,reviewer_id:val("tkReviewer")||null,due_date:val("tkDue")||null,priority:val("tkPriority")||"عادي",status:val("tkStatus")||"لم يبدأ",output:val("tkOutput").trim()||null,created_by:profile.id};
+ const {error}=await sb.from("tasks").insert(payload);if(error){alert("تعذر حفظ المهمة: "+error.message);return}closeModal();await reloadAll();
+}'''
+
+          close_old='function openCloseModal(){return}'
+          close_new=r'''function openCloseModal(){
+ if(!["CFO","Supervisor"].includes(profile.role))return;
+ const members=profiles.map(x=>({value:x.id,label:x.full_name}));
+ showModal("إضافة بند إقفال",`<div class="modal-grid">
+ ${select("clTrack","المسار",["عام","مبيعات"])}
+ ${input("clCode","الرمز / الموعد مثل D+3")}
+ ${input("clName","بند الإقفال")}
+ ${select("clOwner","المسؤول",[{value:"",label:"— غير محدد —"},...members])}
+ ${input("clProgress","نسبة الإنجاز","0","number")}
+ ${select("clStatus","الحالة",["لم يبدأ","قيد التنفيذ","مكتمل","متأخر"])}
+ </div><div class="row" style="margin-top:14px"><button class="btn primary" onclick="saveCloseTask()">حفظ بند الإقفال</button></div>`)
+}
+async function saveCloseTask(){
+ const name=val("clName").trim();if(!name){alert("أدخل اسم بند الإقفال.");return}
+ let progress=Math.max(0,Math.min(100,Number(val("clProgress")||0)));
+ const payload={track:val("clTrack")||"عام",code:val("clCode").trim()||null,name,owner_id:val("clOwner")||null,progress,status:val("clStatus")||"لم يبدأ",created_by:profile.id};
+ const {error}=await sb.from("monthly_close_tasks").insert(payload);if(error){alert("تعذر حفظ بند الإقفال: "+error.message);return}closeModal();await reloadAll();
+}'''
+
+          imprest_old='function openImprestModal(){return}'
+          imprest_new=r'''function openImprestModal(){
+ if(!["CFO","Supervisor","BankAccountant","APAccountant"].includes(profile.role))return;
+ const members=profiles.map(x=>({value:x.id,label:x.full_name}));
+ showModal("إضافة عهدة",`<div class="modal-grid">
+ ${select("imType","نوع العهدة",["عهدة عامة","عهدة مشروع","عهدة مؤقتة"])}
+ ${input("imCompany","الشركة")}
+ ${input("imName","اسم / وصف العهدة")}
+ ${select("imCustodian","المسؤول عن العهدة",[{value:"",label:"— غير محدد —"},...members])}
+ ${input("imBalance","الرصيد","0","number")}
+ ${input("imUnsettled","غير مسوى","0","number")}
+ ${input("imAging","العمر بالأيام","0","number")}
+ ${select("imStatus","الحالة",["سليمة","تحتاج تسوية","متأخرة"])}
+ </div><div class="row" style="margin-top:14px"><button class="btn primary" onclick="saveImprest()">حفظ العهدة</button></div>`)
+}
+async function saveImprest(){
+ const type=val("imType"),company=val("imCompany").trim(),name=val("imName").trim();if(!type||!company||!name){alert("أكمل نوع العهدة والشركة والوصف.");return}
+ const payload={type,company,name,custodian_id:val("imCustodian")||null,balance:Number(val("imBalance")||0),unsettled:Number(val("imUnsettled")||0),aging:Math.max(0,parseInt(val("imAging")||"0",10)||0),status:val("imStatus")||"سليمة",created_by:profile.id};
+ const {error}=await sb.from("imprest_funds").insert(payload);if(error){alert("تعذر حفظ العهدة: "+error.message);return}closeModal();await reloadAll();
+}'''
+
+          ex_old='function openExceptionModal(){return}'
+          ex_new=r'''function openExceptionModal(){
+ if(profile.role!=="CFO")return;
+ const members=profiles.map(x=>({value:x.id,label:`${x.full_name} — ${ROLE_LABEL[x.role]||x.role}`}));
+ showModal("إضافة استثناء / إجازة",`<div class="modal-grid">
+ ${select("exKind","نوع السجل",[{value:"general",label:"استثناء عام"},{value:"leave",label:"إجازة ونقل صلاحيات"}])}
+ ${input("exType","عنوان الاستثناء")}
+ ${select("exSeverity","الأهمية",["منخفض","متوسط","عالي","حرج"])}
+ ${select("exOwner","الموظف المعني",[{value:"",label:"— غير محدد —"},...members])}
+ <div style="grid-column:1/-1">${input("exDetail","التفاصيل")}</div>
+ <div id="leaveFields" style="display:none;grid-column:1/-1"><div class="modal-grid">
+ ${select("exAbsent","الموظف في الإجازة",members)}
+ ${select("exSub","البديل",members)}
+ ${input("exFrom","من تاريخ","","date")}
+ ${input("exTo","إلى تاريخ","","date")}
+ </div></div>
+ </div><div class="row" style="margin-top:14px"><button class="btn primary" onclick="saveException()">حفظ</button></div>`)
+ const k=document.getElementById("exKind"),lf=document.getElementById("leaveFields");const sync=()=>lf.style.display=k.value==="leave"?"block":"none";k.onchange=sync;sync();
+}
+async function saveException(){
+ const kind=val("exKind"),type=val("exType").trim();if(!type){alert("أدخل عنوان الاستثناء.");return}
+ let leaveId=null;
+ if(kind==="leave"){
+   const absent=val("exAbsent"),sub=val("exSub"),from=val("exFrom"),to=val("exTo");
+   if(!absent||!sub||!from||!to){alert("أكمل بيانات الإجازة والبديل.");return}
+   if(absent===sub){alert("يجب أن يكون البديل موظفاً مختلفاً.");return}
+   const {data:ld,error:le}=await sb.from("leave_delegations").insert({absent_user_id:absent,substitute_user_id:sub,date_from:from,date_to:to,notes:val("exDetail").trim()||null,created_by:profile.id}).select("id").single();
+   if(le){alert("تعذر حفظ نقل الصلاحيات: "+le.message);return}leaveId=ld.id;
+ }
+ const payload={kind,type,severity:val("exSeverity")||"متوسط",owner_id:val("exOwner")||null,detail:val("exDetail").trim()||null,status:"مفتوح",leave_delegation_id:leaveId,created_by:profile.id};
+ const {error}=await sb.from("exceptions").insert(payload);if(error){alert("تعذر حفظ الاستثناء: "+error.message);return}closeModal();await reloadAll();
+}'''
+
+          replacements=[(payment_old,payment_new),(task_old,task_new),(close_old,close_new),(imprest_old,imprest_new),(ex_old,ex_new)]
+          for old,new in replacements:
+              if old not in html:
+                  raise SystemExit(f'Missing stub: {old}')
+              html=html.replace(old,new,1)
+
+          p.write_text(html,encoding='utf-8')
+          PY
+      - name: Commit fixes
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Implement all add modals and save flows' || exit 0
+          git push
