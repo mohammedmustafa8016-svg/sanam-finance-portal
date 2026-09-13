@@ -1,0 +1,76 @@
+name: Bootstrap Sanam Finance Portal
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bootstrap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch current production portal
+        run: |
+          curl -fL --retry 3 --retry-delay 2 \
+            'https://sanam-finance-cloud-pilot-mohammedmustafa8016-6001.vercel.app' \
+            -o index.html
+
+      - name: Patch action buttons safely
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          fix = r'''
+          <script id="sanam-action-button-fix">
+          (() => {
+            const bind = (id, fnName) => {
+              const el = document.getElementById(id);
+              if (!el) return;
+              el.style.pointerEvents = 'auto';
+              el.disabled = false;
+              el.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                const fn = window[fnName];
+                if (typeof fn === 'function') fn();
+                else alert('تعذر فتح نافذة الإدخال. يرجى تحديث الصفحة.');
+              }, true);
+            };
+            bind('addBankBtn','openBankModal');
+            bind('addPaymentBtn','openPaymentModal');
+            bind('addTaskBtn','openTaskModal');
+            bind('addCloseBtn','openCloseModal');
+            bind('addImprestBtn','openImprestModal');
+            bind('addExceptionBtn','openExceptionModal');
+          })();
+          </script>
+          '''
+          if 'sanam-action-button-fix' not in html:
+              html = html.replace('</body>', fix + '\n</body>')
+          p.write_text(html, encoding='utf-8')
+          PY
+
+      - name: Add Vercel static config
+        run: |
+          cat > vercel.json <<'JSON'
+          {
+            "cleanUrls": true,
+            "trailingSlash": false
+          }
+          JSON
+
+      - name: Commit portal source
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html vercel.json
+          git commit -m 'Bootstrap portal source and fix action buttons' || exit 0
+          git push
