@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sanam Finance Portal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="authScreen" class="auth">
+  <div class="auth-card">
+    <h1>Sanam Finance Portal</h1>
+    <div class="muted" style="margin-bottom:18px">نسخة سحابية تجريبية — الدخول متاح فقط لأعضاء فريق الإدارة المالية المعتمدين.</div>
+    <label>البريد الإلكتروني للعمل</label>
+    <input id="loginEmail" type="email" placeholder="name@sanamint.sa" autocomplete="email">
+    <label style="margin-top:10px">كلمة المرور</label>
+    <input id="loginPassword" type="password" placeholder="8 خانات على الأقل تشمل حروفًا وأرقامًا" autocomplete="current-password"><div class="muted" style="margin-top:5px">الحد الأدنى: 8 خانات، ويجب أن تتضمن حروفًا وأرقامًا معًا.</div>
+    <button id="loginBtn" class="btn primary" style="width:100%;margin-top:12px">تسجيل الدخول</button>
+    <button id="signupBtn" class="btn" style="width:100%;margin-top:8px">تفعيل الحساب لأول مرة</button>
+    <div class="muted" style="margin-top:10px">في أول استخدام اختر كلمة مرور من 8 خانات على الأقل وتحتوي على حرف واحد ورقم واحد على الأقل، ثم اضغط «تفعيل الحساب لأول مرة». بعد ذلك استخدم «تسجيل الدخول» دائمًا.</div>
+    <div id="loginMsg" class="muted" style="margin-top:10px"></div>
+  </div>
+</div>
+<div id="app" class="app hidden">
+  <aside class="side">
+    <div class="brand"><b>مركز التحكم المالي</b><small>Sanam Finance Portal</small></div>
+    <button class="nav active" data-page="dashboard">لوحة المعلومات</button>
+    <button class="nav" data-page="banks">السيولة والبنوك</button>
+    <button class="nav" data-page="payments">المدفوعات والاعتمادات</button>
+    <button class="nav" data-page="posted">المدفوعات المرحلة</button>
+    <button class="nav" data-page="tasks">المهام</button>
+    <button class="nav" data-page="close">الإقفال الشهري</button>
+    <button class="nav" data-page="imprest">العهد</button>
+    <button class="nav" data-page="performance">أداء الفريق</button>
+    <button class="nav" data-page="ownership">مصفوفة المسؤوليات</button>
+    <button class="nav" data-page="exceptions">الاستثناءات والإجازات</button>
+    <button class="nav" data-page="audit">سجل العمليات</button>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <div><b id="pageTitle">لوحة المعلومات</b><div id="userRole" class="muted"></div></div>
+      <button id="logoutBtn" class="btn">تسجيل الخروج</button>
+    </div>
+    <div class="content">
+      <section id="dashboard" class="section active">
+        <div class="grid g4">
+          <div class="card kpi"><span>إجمالي الأرصدة</span><b id="kpiBalance">—</b></div>
+          <div class="card kpi"><span>الرصيد المحجوز</span><b id="kpiReserved">—</b></div>
+          <div class="card kpi"><span>السيولة المتاحة</span><b id="kpiAvailable">—</b></div>
+          <div class="card kpi"><span>بانتظار CFO</span><b id="kpiCfo">—</b></div>
+        </div>
+        <div class="card" style="margin-top:14px"><h3 style="margin-top:0">التنبيهات الحالية</h3><div id="dashboardAlerts" class="muted">لا توجد بيانات بعد.</div></div>
+      </section>
+      <section id="banks" class="section">
+        <div class="row" style="margin-bottom:12px"><h3>السيولة والبنوك</h3><button id="addBankBtn" class="btn primary" type="button" onclick="openBankModal()">+ إضافة حساب</button></div>
+        <div class="note" style="margin-bottom:12px">الرصيد المحجوز يُحتسب تلقائياً من المدفوعات غير المنفذة المرتبطة بالحساب البنكي ولا يمكن إدخاله يدويًا.</div>
+        <div class="table-wrap"><table><thead><tr><th>الشركة</th><th>البنك</th><th>الحساب</th><th>الرصيد</th><th>المحجوز</th><th>المتاح</th><th>آخر تحديث</th><th>إجراء</th></tr></thead><tbody id="banksBody"></tbody></table></div>
+      </section>
+      <section id="payments" class="section">
+        <div class="row" style="margin-bottom:12px"><h3>المدفوعات والاعتمادات</h3><button id="addPaymentBtn" class="btn primary" type="button" onclick="openPaymentModal()">+ إضافة دفعة</button></div>
+        <div class="table-wrap"><table><thead><tr><th>الاستحقاق</th><th>الشركة</th><th>المستفيد</th><th>المبلغ</th><th>الحساب</th><th>المشرف</th><th>CFO</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="paymentsBody"></tbody></table></div>
+      </section>
+      <section id="posted" class="section">
+        <div class="row" style="margin-bottom:12px"><h3>المدفوعات المرحلة</h3></div>
+        <div class="table-wrap"><table><thead><tr><th>تاريخ الترحيل</th><th>الشركة</th><th>المستفيد</th><th>المبلغ</th><th>الحساب</th><th>الغرض</th></tr></thead><tbody id="postedBody"></tbody></table></div>
+      </section>
+      <section id="tasks" class="section">
+        <div class="row" style="margin-bottom:12px"><h3>المهام</h3><button id="addTaskBtn" class="btn primary" type="button" onclick="openTaskModal()">+ إضافة مهمة</button></div>
+        <div class="table-wrap"><table><thead><tr><th>المهمة</th><th>المسؤول</th><th>المراجع</th><th>الموعد</th><th>الأولوية</th><th>الحالة</th></tr></thead><tbody id="tasksBody"></tbody></table></div>
+      </section>
+      <section id="close" class="section">
+        <div class="row" style="margin-bottom:12px"><h3>الإقفال الشهري</h3><button id="addCloseBtn" class="btn primary" type="button" onclick="openCloseModal()">+ إضافة بند إقفال</button></div>
+        <div class="table-wrap"><table><thead><tr><th>المسار</th><th>الرمز</th><th>البند</th><th>المسؤول</th><th>الإنجاز</th><th>الحالة</th></tr></thead><tbody id="closeBody"></tbody></table></div>
+      </section>
+      <section id="imprest" class="section">
+        <div class="row" style="margin-bottom:12px"><h3>العهد</h3><button id="addImprestBtn" class="btn primary" type="button" onclick="openImprestModal()">+ إضافة عهدة</button></div>
+        <div class="table-wrap"><table><thead><tr><th>النوع</th><th>الشركة</th><th>العهدة</th><th>المسؤول</th><th>الرصيد</th><th>غير مسوى</th><th>العمر</th><th>الحالة</th></tr></thead><tbody id="imprestBody"></tbody></table></div>
+      </section>
+      <section id="performance" class="section">
+        <div class="row" style="margin-bottom:12px"><h3>أداء الفريق</h3></div>
+        <div id="performanceGrid" class="grid g2"></div>
+      </section>
+      <section id="ownership" class="section">
+        <div class="row" style="margin-bottom:12px"><h3>مصفوفة المسؤوليات</h3></div>
+        <div class="table-wrap"><table><thead><tr><th>العملية</th><th>النشاط</th><th>التكرار</th><th>المالك</th><th>المراجع</th><th>المعتمد</th><th>المخرج</th></tr></thead><tbody id="ownershipBody"></tbody></table></div>
+      </section>
+      <section id="exceptions" class="section">
+        <div class="row" style="margin-bottom:12px"><h3>الاستثناءات والإجازات</h3><button id="addExceptionBtn" class="btn primary" type="button" onclick="openExceptionModal()">+ إضافة استثناء</button></div>
+        <div id="exceptionsList"></div>
+      </section>
+      <section id="audit" class="section">
+        <div class="row" style="margin-bottom:12px"><h3>سجل العمليات</h3><button class="btn" onclick="loadAudit()">تحديث</button></div>
+        <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>المستخدم</th><th>الإجراء</th><th>الكيان</th><th>المعرف</th></tr></thead><tbody id="auditBody"></tbody></table></div>
+      </section>
+    </div>
+  </main>
+</div>
+<div id="modalBg" class="modal-bg"><div class="modal"><div class="row"><h3 id="modalTitle" style="margin:0"></h3><button class="btn" onclick="closeModal()">إغلاق</button></div><div id="modalBody" style="margin-top:14px"></div></div></div>
+<script src="app.js"></script>
+</body>
+</html>
