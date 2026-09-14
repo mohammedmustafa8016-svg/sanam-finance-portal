@@ -1,0 +1,56 @@
+name: Finalize payment report review
+
+on:
+  push:
+    branches: [dev-payment-report-print-review]
+    paths:
+      - '.github/workflows/finalize-payment-report-review.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-payment-report-print-review
+      - name: Fix CSS typo and remove temporary patch workflows
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          bad='overflow-wrap:anywher}}th{'
+          good='overflow-wrap:anywhere}th{'
+          if bad not in s:
+              raise SystemExit('expected CSS typo not found')
+          p.write_text(s.replace(bad,good,1),encoding='utf-8')
+          PY
+          rm -f .github/workflows/patch-payment-report-print.yml
+          rm -f .github/workflows/patch-payment-report-print-v2.yml
+          rm -f .github/workflows/patch-payment-report-print-v3.yml
+          rm -f .github/workflows/finalize-payment-report-review.yml
+      - name: Validate final branch content
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          assert 'overflow-wrap:anywher}}' not in s
+          assert 'overflow-wrap:anywhere}th{' in s
+          assert '@page{size:A4 ${landscape?' in s
+          assert 'font-family:"Dubai","Segoe UI","Noto Sans Arabic"' in s
+          assert "const landscape=cols.length>7" in s
+          assert "[labels.company,company]" in s
+          assert "[labels.status,status]" in s
+          assert "[labels.bank,bank]" in s
+          print('final payment report review validation passed')
+          PY
+      - name: Commit final cleanup
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Finalize payment report print review' || exit 0
+          git push
