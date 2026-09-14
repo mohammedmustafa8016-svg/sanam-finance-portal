@@ -1,0 +1,37 @@
+name: Harden bilingual completeness
+
+on:
+  push:
+    branches: [dev-baseline-restoration-2026-09-14]
+    paths:
+      - 'scripts/harden_bilingual.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-baseline-restoration-2026-09-14
+      - run: python scripts/harden_bilingual.py
+      - name: JavaScript syntax check
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:[^>]*)>(.*?)</script>',s,re.S)
+          Path('/tmp/sanam-inline.js').write_text('\n'.join(scripts),encoding='utf-8')
+          PY
+          node --check /tmp/sanam-inline.js
+      - name: Commit hardening
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Complete bilingual coverage and harden payment report export' || exit 0
+          git push
