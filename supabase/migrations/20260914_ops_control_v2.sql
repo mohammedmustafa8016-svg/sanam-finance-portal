@@ -213,6 +213,8 @@ $$;
 revoke all on function public.get_escalation_center() from public;
 grant execute on function public.get_escalation_center() to authenticated;
 
+drop function if exists public.get_finance_team_performance();
+
 create or replace function public.get_finance_team_performance()
 returns table(user_id uuid,full_name text,role text,today_total integer,today_completed integer,today_overdue integer,pending_justifications integer,pending_review integer,month_total integer,month_completed integer,month_completion_rate numeric,tracked_on_time_rate numeric,close_total integer,close_completed integer,close_completion_rate numeric)
 language sql stable security definer
