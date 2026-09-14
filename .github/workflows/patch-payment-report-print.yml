@@ -1,0 +1,95 @@
+name: Patch payment report print layout
+
+on:
+  push:
+    branches: [dev-payment-report-print-review]
+    paths:
+      - '.github/workflows/patch-payment-report-print.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-payment-report-print-review
+
+      - name: Improve printable payment report
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          pattern=r'function paymentReportPrintableHtml\(\)\{.*?\nfunction printPaymentReport\(\)'
+          replacement=r'''function paymentReportPrintableHtml(){
+ const cols=selectedPaymentReportColumns(),rows=filteredPaymentReportRows(),total=rows.reduce((a,p)=>a+Number(p.amount||0),0);
+ const landscape=cols.length>7;
+ const company=val('pr_company')||displayText('كل الشركات');
+ const status=val('pr_status')?displayText(val('pr_status')):displayText('كل الحالات');
+ const bankId=val('pr_bank');
+ const bank=bankId?(banks.find(b=>b.id===bankId)?`${banks.find(b=>b.id===bankId).bank_name} — ${banks.find(b=>b.id===bankId).account_name} (${banks.find(b=>b.id===bankId).company})`:bankId):displayText('كل الحسابات');
+ const from=val('pr_from')||displayText('الكل'),to=val('pr_to')||displayText('الكل');
+ const labels=currentLang==='en'?{period:'Period',company:'Company',status:'Status',bank:'Bank Account',count:'Payment Count',total:'Total Amount'}:{period:'الفترة',company:'الشركة',status:'الحالة',bank:'حساب البنك',count:'عدد الدفعات',total:'إجمالي المبلغ'};
+ const filters=[
+  [labels.period,`${from} → ${to}`],
+  [labels.company,company],
+  [labels.status,status],
+  [labels.bank,bank]
+ ];
+ const dir=currentLang==='en'?'ltr':'rtl',align=currentLang==='en'?'left':'right';
+ return `<!doctype html><html lang="${currentLang}" dir="${dir}"><head><meta charset="utf-8"><title>Sanam Finance - ${displayText('تقرير المدفوعات')}</title><style>
+ @page{size:A4 ${landscape?'landscape':'portrait'};margin:10mm}
+ *{box-sizing:border-box}html,body{direction:${dir}}body{font-family:"Dubai","Segoe UI","Noto Sans Arabic",Tahoma,Arial,sans-serif;padding:0;margin:0;color:#172033;background:#fff;text-align:${align}}
+ .header{border-bottom:2px solid #0f2740;padding-bottom:10px;margin-bottom:12px}.header h1{margin:0 0 4px;font-size:20px}.header .sub{font-size:12px;color:#475467}
+ .filters{display:grid;grid-template-columns:${landscape?'repeat(4,minmax(0,1fr))':'repeat(2,minmax(0,1fr))'};gap:7px;margin:10px 0 12px}.filter{border:1px solid #d7dde5;border-radius:5px;padding:7px 9px;min-width:0}.filter b{display:block;font-size:9px;color:#667085;margin-bottom:2px}.filter span{display:block;font-size:10px;white-space:normal;overflow-wrap:anywhere}
+ .summary{display:flex;gap:14px;flex-wrap:wrap;margin:0 0 12px;font-size:11px}.summary .item{border:1px solid #d7dde5;border-radius:5px;padding:7px 10px;background:#f8fafc}.summary b{margin-${currentLang==='en'?'right':'left'}:4px}
+ table{width:100%;border-collapse:collapse;font-size:${landscape?'8.5':'9.5'}px;table-layout:auto}thead{display:table-header-group}tr{page-break-inside:avoid}th,td{border:1px solid #d7dde5;padding:${landscape?'5':'6'}px;text-align:${align};vertical-align:top;white-space:normal;overflow-wrap:anywhere}th{background:#eef2f6;color:#334155;font-weight:700}.neg{color:#a43f3f;font-weight:700}
+ .footer{margin-top:8px;font-size:8px;color:#667085;text-align:center}.nowrap{white-space:nowrap}
+ @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.header,.filters,.summary{page-break-inside:avoid}}
+ </style></head><body>
+ <div class="header"><h1>Sanam Finance Portal</h1><div class="sub">${displayText('تقرير المدفوعات الاحترافي')}</div></div>
+ <div class="filters">${filters.map(([k,v])=>`<div class="filter"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('')}</div>
+ <div class="summary"><div class="item"><b>${esc(labels.count)}:</b> ${rows.length}</div><div class="item"><b>${esc(labels.total)}:</b> ${esc(money(total))}</div></div>
+ <table><thead><tr>${cols.map(c=>`<th>${esc(reportColumnLabel(c))}</th>`).join('')}</tr></thead><tbody>${rows.map(p=>`<tr>${cols.map(c=>`<td class="${c.key==='amount'&&Number(p.amount)<0?'neg':''}">${esc(paymentReportValue(p,c.key))}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${Math.max(cols.length,1)}">—</td></tr>`}</tbody></table>
+ <div class="footer">Sanam Finance Portal</div></body></html>`
+}
+function printPaymentReport()'''
+          ns,n=re.subn(pattern,replacement,s,count=1,flags=re.S)
+          if n!=1:
+              raise SystemExit(f'print function target not replaced: {n}')
+          p.write_text(ns,encoding='utf-8')
+          PY
+
+      - name: Static validation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          checks=['@page{size:A4 ${landscape?\'landscape\':\'portrait\'}','font-family:"Dubai"','labels.period','labels.company','labels.status','labels.bank','dir=currentLang===\'en\'?\'ltr\':\'rtl\'','thead{display:table-header-group}','page-break-inside:avoid']
+          missing=[x for x in checks if x not in s]
+          if missing: raise SystemExit('missing: '+repr(missing))
+          print('print layout static checks passed')
+          PY
+
+      - name: JavaScript syntax check
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          m=re.search(r'<script>(.*)</script>',s,re.S)
+          Path('/tmp/app.js').write_text(m.group(1),encoding='utf-8')
+          PY
+          node --check /tmp/app.js
+
+      - name: Commit print improvements
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Improve payment report print and PDF layout' || exit 0
+          git push
