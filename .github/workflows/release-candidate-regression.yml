@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: release-candidate-2026-09-14
+          fetch-depth: 0
 
       - name: Protected application baseline
         run: |
@@ -105,7 +106,7 @@ jobs:
 
       - name: Release scope guard
         run: |
-          git fetch origin main --depth=1
+          git fetch origin main
           changed="$(git diff --name-only origin/main...HEAD | sort)"
           printf '%s\n' "$changed"
           test "$changed" = $'.github/workflows/release-candidate-regression.yml\nindex.html'
