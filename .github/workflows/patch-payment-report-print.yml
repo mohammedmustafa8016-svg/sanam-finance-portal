@@ -1,14 +1,10 @@
 name: Patch payment report print layout
-
 on:
   push:
     branches: [dev-payment-report-print-review]
-    paths:
-      - '.github/workflows/patch-payment-report-print.yml'
-
+    paths: ['.github/workflows/patch-payment-report-print.yml']
 permissions:
   contents: write
-
 jobs:
   patch:
     runs-on: ubuntu-latest
@@ -16,77 +12,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: dev-payment-report-print-review
-
-      - name: Improve printable payment report
+      - name: Patch report
+        env:
+          REPLACEMENT_B64: ZnVuY3Rpb24gcGF5bWVudFJlcG9ydFByaW50YWJsZUh0bWwoKXsKIGNvbnN0IGNvbHM9c2VsZWN0ZWRQYXltZW50UmVwb3J0Q29sdW1ucygpLHJvd3M9ZmlsdGVyZWRQYXltZW50UmVwb3J0Um93cygpLHRvdGFsPXJvd3MucmVkdWNlKChhLHApPT5hK051bWJlcihwLmFtb3VudHx8MCksMCk7CiBjb25zdCBsYW5kc2NhcGU9Y29scy5sZW5ndGg+NzsKIGNvbnN0IGNvbXBhbnk9dmFsKCdwcl9jb21wYW55Jyl8fGRpc3BsYXlUZXh0KCfZg9mEINin2YTYtNix2YPYp9iqJyk7CiBjb25zdCBzdGF0dXM9dmFsKCdwcl9zdGF0dXMnKT9kaXNwbGF5VGV4dCh2YWwoJ3ByX3N0YXR1cycpKTpkaXNwbGF5VGV4dCgn2YPZhCDYp9mE2K3Yp9mE2KfYqicpOwogY29uc3QgYmFua0lkPXZhbCgncHJfYmFuaycpOwogY29uc3QgYmFua09iaj1iYW5rSWQ/YmFua3MuZmluZChiPT5iLmlkPT09YmFua0lkKTpudWxsOwogY29uc3QgYmFuaz1iYW5rSWQ/KGJhbmtPYmo/YCR7YmFua09iai5iYW5rX25hbWV9IOKAlCAke2JhbmtPYmouYWNjb3VudF9uYW1lfSAoJHtiYW5rT2JqLmNvbXBhbnl9KWA6YmFua0lkKTpkaXNwbGF5VGV4dCgn2YPZhCDYp9mE2K3Ys9in2KjYp9iqJyk7CiBjb25zdCBmcm9tPXZhbCgncHJfZnJvbScpfHxkaXNwbGF5VGV4dCgn2KfZhNmD2YQnKSx0bz12YWwoJ3ByX3RvJyl8fGRpc3BsYXlUZXh0KCfYp9mE2YPZhCcpOwogY29uc3QgbGFiZWxzPWN1cnJlbnRMYW5nPT09J2VuJz97cGVyaW9kOidQZXJpb2QnLGNvbXBhbnk6J0NvbXBhbnknLHN0YXR1czonU3RhdHVzJyxiYW5rOidCYW5rIEFjY291bnQnLGNvdW50OidQYXltZW50IENvdW50Jyx0b3RhbDonVG90YWwgQW1vdW50J306e3BlcmlvZDon2KfZhNmB2KrYsdipJyxjb21wYW55OifYp9mE2LTYsdmD2KknLHN0YXR1czon2KfZhNit2KfZhNipJyxiYW5rOifYrdiz2KfYqCDYp9mE2KjZhtmDJyxjb3VudDon2LnYr9ivINin2YTYr9mB2LnYp9iqJyx0b3RhbDon2KXYrNmF2KfZhNmKINin2YTZhdio2YTYuid9OwogY29uc3QgZmlsdGVycz1bCiAgW2xhYmVscy5wZXJpb2QsYCR7ZnJvbX0g4oaSICR7dG99YF0sCiAgW2xhYmVscy5jb21wYW55LGNvbXBhbnldLAogIFtsYWJlbHMuc3RhdHVzLHN0YXR1c10sCiAgW2xhYmVscy5iYW5rLGJhbmtdCiBdOwogY29uc3QgZGlyPWN1cnJlbnRMYW5nPT09J2VuJz8nbHRyJzoncnRsJyxhbGlnbj1jdXJyZW50TGFuZz09PSdlbic/J2xlZnQnOidyaWdodCc7CiByZXR1cm4gYDwhZG9jdHlwZSBodG1sPjxodG1sIGxhbmc9IiR7Y3VycmVudExhbmd9IiBkaXI9IiR7ZGlyfSI+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjx0aXRsZT5TYW5hbSBGaW5hbmNlIC0gJHtkaXNwbGF5VGV4dCgn2KrZgtix2YrYsSDYp9mE2YXYr9mB2YjYudin2KonKX08L3RpdGxlPjxzdHlsZT4KIEBwYWdle3NpemU6QTQgJHtsYW5kc2NhcGU/J2xhbmRzY2FwZSc6J3BvcnRyYWl0J307bWFyZ2luOjEwbW19CiAqe2JveC1zaXppbmc6Ym9yZGVyLWJveH1odG1sLGJvZHl7ZGlyZWN0aW9uOiR7ZGlyfX1ib2R5e2ZvbnQtZmFtaWx5OiJEdWJhaSIsIlNlZ29lIFVJIiwiTm90byBTYW5zIEFyYWJpYyIsVGFob21hLEFyaWFsLHNhbnMtc2VyaWY7cGFkZGluZzowO21hcmdpbjowO2NvbG9yOiMxNzIwMzM7YmFja2dyb3VuZDojZmZmO3RleHQtYWxpZ246JHthbGlnbn19CiAuaGVhZGVye2JvcmRlci1ib3R0b206MnB4IHNvbGlkICMwZjI3NDA7cGFkZGluZy1ib3R0b206MTBweDttYXJnaW4tYm90dG9tOjEycHh9LmhlYWRlciBoMXttYXJnaW46MCAwIDRweDtmb250LXNpemU6MjBweH0uaGVhZGVyIC5zdWJ7Zm9udC1zaXplOjEycHg7Y29sb3I6IzQ3NTQ2N30KIC5maWx0ZXJze2Rpc3BsYXk6Z3JpZDtncmlkLXRlbXBsYXRlLWNvbHVtbnM6JHtsYW5kc2NhcGU/J3JlcGVhdCg0LG1pbm1heCgwLDFmcikpJzoncmVwZWF0KDIsbWlubWF4KDAsMWZyKSknfTtnYXA6N3B4O21hcmdpbjoxMHB4IDAgMTJweH0uZmlsdGVye2JvcmRlcjoxcHggc29saWQgI2Q3ZGRlNTtib3JkZXItcmFkaXVzOjVweDtwYWRkaW5nOjdweCA5cHg7bWluLXdpZHRoOjB9LmZpbHRlciBie2Rpc3BsYXk6YmxvY2s7Zm9udC1zaXplOjlweDtjb2xvcjojNjY3MDg1O21hcmdpbi1ib3R0b206MnB4fS5maWx0ZXIgc3BhbntkaXNwbGF5OmJsb2NrO2ZvbnQtc2l6ZToxMHB4O3doaXRlLXNwYWNlOm5vcm1hbDtvdmVyZmxvdy13cmFwOmFueXdoZXJlfQogLnN1bW1hcnl7ZGlzcGxheTpmbGV4O2dhcDoxNHB4O2ZsZXgtd3JhcDp3cmFwO21hcmdpbjowIDAgMTJweDtmb250LXNpemU6MTFweH0uc3VtbWFyeSAuaXRlbXtib3JkZXI6MXB4IHNvbGlkICNkN2RkZTU7Ym9yZGVyLXJhZGl1czo1cHg7cGFkZGluZzo3cHggMTBweDtiYWNrZ3JvdW5kOiNmOGZhZmN9LnN1bW1hcnkgYnttYXJnaW4tJHtjdXJyZW50TGFuZz09PSdlbic/J3JpZ2h0JzonbGVmdCd9OjRweH0KIHRhYmxle3dpZHRoOjEwMCU7Ym9yZGVyLWNvbGxhcHNlOmNvbGxhcHNlO2ZvbnQtc2l6ZToke2xhbmRzY2FwZT8nOC41JzonOS41J31weDt0YWJsZS1sYXlvdXQ6YXV0b310aGVhZHtkaXNwbGF5OnRhYmxlLWhlYWRlci1ncm91cH10cntwYWdlLWJyZWFrLWluc2lkZTphdm9pZH10aCx0ZHtib3JkZXI6MXB4IHNvbGlkICNkN2RkZTU7cGFkZGluZzoke2xhbmRzY2FwZT8nNSc6JzYnfXB4O3RleHQtYWxpZ246JHthbGlnbn07dmVydGljYWwtYWxpZ246dG9wO3doaXRlLXNwYWNlOm5vcm1hbDtvdmVyZmxvdy13cmFwOmFueXdoZXJ9fXRoe2JhY2tncm91bmQ6I2VlZjJmNjtjb2xvcjojMzM0MTU1O2ZvbnQtd2VpZ2h0OjcwMH0ubmVne2NvbG9yOiNhNDNmM2Y7Zm9udC13ZWlnaHQ6NzAwfQogLmZvb3RlcnttYXJnaW4tdG9wOjhweDtmb250LXNpemU6OHB4O2NvbG9yOiM2NjcwODU7dGV4dC1hbGlnbjpjZW50ZXJ9CiBAbWVkaWEgcHJpbnR7Ym9keXstd2Via2l0LXByaW50LWNvbG9yLWFkanVzdDpleGFjdDtwcmludC1jb2xvci1hZGp1c3Q6ZXhhY3R9LmhlYWRlciwuZmlsdGVycywuc3VtbWFyeXtwYWdlLWJyZWFrLWluc2lkZTphdm9pZH19CiA8L3N0eWxlPjwvaGVhZD48Ym9keT4KIDxkaXYgY2xhc3M9ImhlYWRlciI+PGgxPlNhbmFtIEZpbmFuY2UgUG9ydGFsPC9oMT48ZGl2IGNsYXNzPSJzdWIiPiR7ZGlzcGxheVRleHQoJ9iq2YLYsdmK2LEg2KfZhNmF2K/ZgdmI2LnYp9iqINin2YTYp9it2KrYsdin2YHZiicpfTwvZGl2PjwvZGl2PgogPGRpdiBjbGFzcz0iZmlsdGVycyI+JHtmaWx0ZXJzLm1hcCgoW2ssdl0pPT5gPGRpdiBjbGFzcz0iZmlsdGVyIj48Yj4ke2VzYyhrKX08L2I+PHNwYW4+JHtlc2Modil9PC9zcGFuPjwvZGl2PmApLmpvaW4oJycpfTwvZGl2PgogPGRpdiBjbGFzcz0ic3VtbWFyeSI+PGRpdiBjbGFzcz0iaXRlbSI+PGI+JHtlc2MobGFiZWxzLmNvdW50KX06PC9iPiAke3Jvd3MubGVuZ3RofTwvZGl2PjxkaXYgY2xhc3M9Iml0ZW0iPjxiPiR7ZXNjKGxhYmVscy50b3RhbCl9OjwvYj4gJHtlc2MobW9uZXkodG90YWwpKX08L2Rpdj48L2Rpdj4KIDx0YWJsZT48dGhlYWQ+PHRyPiR7Y29scy5tYXAoYz0+YDx0aD4ke2VzYyhyZXBvcnRDb2x1bW5MYWJlbChjKSl9PC90aD5gKS5qb2luKCcnKX08L3RyPjwvdGhlYWQ+PHRib2R5PiR7cm93cy5tYXAocD0+YDx0cj4ke2NvbHMubWFwKGM9PmA8dGQgY2xhc3M9IiR7Yy5rZXk9PT0nYW1vdW50JyYmTnVtYmVyKHAuYW1vdW50KTwwPyduZWcnOicnfSI+JHtlc2MocGF5bWVudFJlcG9ydFZhbHVlKHAsYy5rZXkpKX08L3RkPmApLmpvaW4oJycpfTwvdHI+YCkuam9pbignJyl8fGA8dHI+PHRkIGNvbHNwYW49IiR7TWF0aC5tYXgoY29scy5sZW5ndGgsMSl9Ij7igJQ8L3RkPjwvdHI+YH08L3Rib2R5PjwvdGFibGU+CiA8ZGl2IGNsYXNzPSJmb290ZXIiPlNhbmFtIEZpbmFuY2UgUG9ydGFsPC9kaXY+PC9ib2R5PjwvaHRtbD5gCn0KZnVuY3Rpb24gcHJpbnRQYXltZW50UmVwb3J0KCk=
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
-          p=Path('index.html')
-          s=p.read_text(encoding='utf-8')
-          pattern=r'function paymentReportPrintableHtml\(\)\{.*?\nfunction printPaymentReport\(\)'
-          replacement=r'''function paymentReportPrintableHtml(){
- const cols=selectedPaymentReportColumns(),rows=filteredPaymentReportRows(),total=rows.reduce((a,p)=>a+Number(p.amount||0),0);
- const landscape=cols.length>7;
- const company=val('pr_company')||displayText('كل الشركات');
- const status=val('pr_status')?displayText(val('pr_status')):displayText('كل الحالات');
- const bankId=val('pr_bank');
- const bank=bankId?(banks.find(b=>b.id===bankId)?`${banks.find(b=>b.id===bankId).bank_name} — ${banks.find(b=>b.id===bankId).account_name} (${banks.find(b=>b.id===bankId).company})`:bankId):displayText('كل الحسابات');
- const from=val('pr_from')||displayText('الكل'),to=val('pr_to')||displayText('الكل');
- const labels=currentLang==='en'?{period:'Period',company:'Company',status:'Status',bank:'Bank Account',count:'Payment Count',total:'Total Amount'}:{period:'الفترة',company:'الشركة',status:'الحالة',bank:'حساب البنك',count:'عدد الدفعات',total:'إجمالي المبلغ'};
- const filters=[
-  [labels.period,`${from} → ${to}`],
-  [labels.company,company],
-  [labels.status,status],
-  [labels.bank,bank]
- ];
- const dir=currentLang==='en'?'ltr':'rtl',align=currentLang==='en'?'left':'right';
- return `<!doctype html><html lang="${currentLang}" dir="${dir}"><head><meta charset="utf-8"><title>Sanam Finance - ${displayText('تقرير المدفوعات')}</title><style>
- @page{size:A4 ${landscape?'landscape':'portrait'};margin:10mm}
- *{box-sizing:border-box}html,body{direction:${dir}}body{font-family:"Dubai","Segoe UI","Noto Sans Arabic",Tahoma,Arial,sans-serif;padding:0;margin:0;color:#172033;background:#fff;text-align:${align}}
- .header{border-bottom:2px solid #0f2740;padding-bottom:10px;margin-bottom:12px}.header h1{margin:0 0 4px;font-size:20px}.header .sub{font-size:12px;color:#475467}
- .filters{display:grid;grid-template-columns:${landscape?'repeat(4,minmax(0,1fr))':'repeat(2,minmax(0,1fr))'};gap:7px;margin:10px 0 12px}.filter{border:1px solid #d7dde5;border-radius:5px;padding:7px 9px;min-width:0}.filter b{display:block;font-size:9px;color:#667085;margin-bottom:2px}.filter span{display:block;font-size:10px;white-space:normal;overflow-wrap:anywhere}
- .summary{display:flex;gap:14px;flex-wrap:wrap;margin:0 0 12px;font-size:11px}.summary .item{border:1px solid #d7dde5;border-radius:5px;padding:7px 10px;background:#f8fafc}.summary b{margin-${currentLang==='en'?'right':'left'}:4px}
- table{width:100%;border-collapse:collapse;font-size:${landscape?'8.5':'9.5'}px;table-layout:auto}thead{display:table-header-group}tr{page-break-inside:avoid}th,td{border:1px solid #d7dde5;padding:${landscape?'5':'6'}px;text-align:${align};vertical-align:top;white-space:normal;overflow-wrap:anywhere}th{background:#eef2f6;color:#334155;font-weight:700}.neg{color:#a43f3f;font-weight:700}
- .footer{margin-top:8px;font-size:8px;color:#667085;text-align:center}.nowrap{white-space:nowrap}
- @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.header,.filters,.summary{page-break-inside:avoid}}
- </style></head><body>
- <div class="header"><h1>Sanam Finance Portal</h1><div class="sub">${displayText('تقرير المدفوعات الاحترافي')}</div></div>
- <div class="filters">${filters.map(([k,v])=>`<div class="filter"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('')}</div>
- <div class="summary"><div class="item"><b>${esc(labels.count)}:</b> ${rows.length}</div><div class="item"><b>${esc(labels.total)}:</b> ${esc(money(total))}</div></div>
- <table><thead><tr>${cols.map(c=>`<th>${esc(reportColumnLabel(c))}</th>`).join('')}</tr></thead><tbody>${rows.map(p=>`<tr>${cols.map(c=>`<td class="${c.key==='amount'&&Number(p.amount)<0?'neg':''}">${esc(paymentReportValue(p,c.key))}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${Math.max(cols.length,1)}">—</td></tr>`}</tbody></table>
- <div class="footer">Sanam Finance Portal</div></body></html>`
-}
-function printPaymentReport()'''
-          ns,n=re.subn(pattern,replacement,s,count=1,flags=re.S)
-          if n!=1:
-              raise SystemExit(f'print function target not replaced: {n}')
+          import base64,re,os
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          replacement=base64.b64decode(os.environ['REPLACEMENT_B64']).decode('utf-8')
+          ns,n=re.subn(r'function paymentReportPrintableHtml\(\)\{.*?\nfunction printPaymentReport\(\)',replacement,s,count=1,flags=re.S)
+          if n!=1: raise SystemExit(f'target replace count={n}')
           p.write_text(ns,encoding='utf-8')
-          PY
-
-      - name: Static validation
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          s=Path('index.html').read_text(encoding='utf-8')
-          checks=['@page{size:A4 ${landscape?\'landscape\':\'portrait\'}','font-family:"Dubai"','labels.period','labels.company','labels.status','labels.bank','dir=currentLang===\'en\'?\'ltr\':\'rtl\'','thead{display:table-header-group}','page-break-inside:avoid']
-          missing=[x for x in checks if x not in s]
-          if missing: raise SystemExit('missing: '+repr(missing))
-          print('print layout static checks passed')
-          PY
-
-      - name: JavaScript syntax check
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          s=Path('index.html').read_text(encoding='utf-8')
-          m=re.search(r'<script>(.*)</script>',s,re.S)
+          m=re.search(r'<script>(.*)</script>',ns,re.S)
           Path('/tmp/app.js').write_text(m.group(1),encoding='utf-8')
           PY
           node --check /tmp/app.js
-
-      - name: Commit print improvements
+      - name: Commit
         run: |
           git config user.name 'Sanam Finance Automation'
           git config user.email 'actions@users.noreply.github.com'
