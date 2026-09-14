@@ -1,0 +1,36 @@
+name: Patch ops control v2
+on:
+  push:
+    branches: [feature-ops-control-v2-2026-09-14]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'sanam-automation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Patch portal UI
+        run: python scripts/patch_ops_control_v2.py
+      - name: Validate JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text()
+          scripts=re.findall(r'<script(?: [^>]*)?>(.*?)</script>',s,re.S)
+          inline='\n'.join(x for x in scripts if x.strip() and 'src=' not in x[:80])
+          Path('/tmp/app.js').write_text(inline)
+          PY
+          node --check /tmp/app.js
+      - name: Commit patch
+        run: |
+          if git diff --quiet -- index.html; then exit 0; fi
+          git config user.name "sanam-automation"
+          git config user.email "sanam-automation@users.noreply.github.com"
+          git add index.html
+          git commit -m "Implement operations control v2 UI"
+          git push
