@@ -1,0 +1,49 @@
+name: Patch daily plan assignment
+on:
+  push:
+    branches: [feature-daily-plan-assignment-2026-09-14]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch task frequency controls
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          marker='/* DAILY_PLAN_ASSIGNMENT_2026_09_14 */'
+          if marker in s: raise SystemExit(0)
+          old='<th>التاريخ</th><th>الوقت</th><th>الأولوية</th>'
+          new='<th>التاريخ</th><th>التكرار</th><th>الوقت</th><th>الأولوية</th>'
+          if old not in s: raise SystemExit('task header anchor missing')
+          s=s.replace(old,new,1)
+          old='</td><td>${esc(t.due_date||"—")}</td><td>${esc(t.due_time?String(t.due_time).slice(0,5):"—")}</td><td>${badge(t.priority||"عادي")}'
+          new='</td><td>${esc(t.due_date||"—")}</td><td>${esc(t.frequency||"—")}</td><td>${esc(t.due_time?String(t.due_time).slice(0,5):"—")}</td><td>${badge(t.priority||"عادي")}'
+          if old not in s: raise SystemExit('task row anchor missing')
+          s=s.replace(old,new,1)
+          s=s.replace('colspan="9" class="muted">—</td></tr>`}\nfunction openDailyPlan', 'colspan="10" class="muted">—</td></tr>`}\nfunction openDailyPlan',1)
+          old='${input("t_due","الموعد","","date")}${input("t_due_time","الوقت","","time")}${select("t_priority"'
+          new='${input("t_due","الموعد","","date")}${select("t_frequency","التكرار",["يومي","حسب الحاجة","دوري","شهري","مستمر","حسب العملية"])}${input("t_due_time","الوقت","","time")}${select("t_priority"'
+          if old not in s: raise SystemExit('task modal anchor missing')
+          s=s.replace(old,new,1)
+          old='due_date:val("t_due")||null,due_time:val("t_due_time")||null,priority:val("t_priority")'
+          new='due_date:val("t_due")||null,frequency:val("t_frequency")||"يومي",due_time:val("t_due_time")||null,priority:val("t_priority")'
+          if old not in s: raise SystemExit('save task anchor missing')
+          s=s.replace(old,new,1)
+          s=s.replace('I18N_AR_EN["الوقت"]="Time";', 'I18N_AR_EN["الوقت"]="Time";\nI18N_AR_EN["حسب الحاجة"]="As Needed";\nI18N_AR_EN["دوري"]="Periodic";\nI18N_AR_EN["شهري"]="Monthly";\nI18N_AR_EN["مستمر"]="Continuous";\nI18N_AR_EN["حسب العملية"]="Per Transaction";',1)
+          s=s.replace('</script>',marker+'\n</script>',1)
+          p.write_text(s)
+          PY
+          node -e "const fs=require('fs');const s=fs.readFileSync('index.html','utf8');const m=s.match(/<script>([\\s\\S]*)<\\/script>/);new Function(m[1]);"
+      - name: Commit
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "sanam-automation"
+          git config user.email "sanam-automation@users.noreply.github.com"
+          git add index.html
+          git commit -m "Allow Supervisor to create daily plan assignments"
+          git push
