@@ -1,0 +1,43 @@
+name: Patch Audit Log UI
+
+on:
+  push:
+    branches: [dev-baseline-restoration-2026-09-14]
+    paths: ['.github/workflows/patch-audit-log-ui.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repair audit log field mapping
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='async function loadAudit(){if(profile.role!=="CFO")return;const {data,error}=await sb.from("audit_log").select("*").order("created_at",{ascending:false}).limit(200);if(error)return;auditBody.innerHTML=(data||[]).map(x=>`<tr><td>${fmt(x.created_at)}</td><td>${esc(x.actor_email||"—")}</td><td>${esc(x.action)}</td><td>${esc(x.entity)}</td><td>${esc(x.entity_id||"—")}</td></tr>`).join("")}'
+          new='async function loadAudit(){if(profile.role!=="CFO")return;const {data,error}=await sb.from("audit_log").select("*,actor:profiles!audit_log_actor_id_fkey(full_name,email)").order("created_at",{ascending:false}).limit(200);if(error){auditBody.innerHTML=`<tr><td colspan="5">${esc(error.message)}</td></tr>`;return}auditBody.innerHTML=(data||[]).map(x=>`<tr><td>${fmt(x.created_at)}</td><td>${esc(x.actor?.full_name||x.actor?.email||"—")}</td><td>${esc(x.action)}</td><td>${esc(x.entity_type||"—")}</td><td>${esc(x.entity_id||"—")}</td></tr>`).join("")}'
+          if old not in s:
+              raise SystemExit('audit function target not found')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Validate audit mapping
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          assert 'entity_type' in s
+          assert 'audit_log_actor_id_fkey' in s
+          assert 'actor_email' not in s
+          PY
+      - name: Commit
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Repair Audit Log UI field mapping' || exit 0
+          git push
