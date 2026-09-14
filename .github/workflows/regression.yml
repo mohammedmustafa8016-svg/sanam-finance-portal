@@ -1,0 +1,21 @@
+name: Sanam Finance Regression
+
+on:
+  push:
+    branches:
+      - main
+      - 'audit-snapshot-*'
+      - 'dev-*'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  static-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run baseline regression suite
+        run: python tests/regression.py
