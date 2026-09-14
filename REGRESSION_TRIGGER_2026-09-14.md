@@ -1,1 +1,1 @@
-Protected regression trigger after restoring professional payment reports and full Arabic/English interface support. No production promotion is authorized by this file.
+Protected regression trigger after restoring professional payment reports and full Arabic/English interface support. Includes reviewed print/PDF layout hardening with filter summary, adaptive A4 landscape, RTL/LTR and font fallbacks. No production promotion is authorized by this file.
