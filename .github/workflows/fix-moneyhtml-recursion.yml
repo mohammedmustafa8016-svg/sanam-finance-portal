@@ -1,0 +1,43 @@
+name: Fix moneyHtml recursion
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-moneyhtml-recursion.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix negative amount formatter
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='const moneyHtml=n=>Number(n)<0?`<span class="negative-amount">${moneyHtml(n)}</span>`:money(n);'
+          new='const moneyHtml=n=>Number(n)<0?`<span class="negative-amount">${money(n)}</span>`:money(n);'
+          if old not in s:
+              raise SystemExit('target moneyHtml implementation not found')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Validate formatter is non-recursive
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          assert '${moneyHtml(n)}' not in s, 'recursive moneyHtml remains'
+          assert '.negative-amount' in s, 'negative amount style missing'
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Fix negative amount formatter recursion' || exit 0
+          git push
