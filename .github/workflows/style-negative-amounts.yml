@@ -1,0 +1,42 @@
+name: Style negative amounts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/style-negative-amounts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make negative monetary values bold red
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          html=p.read_text(encoding='utf-8')
+          css='.negative-amount{color:var(--red);font-weight:700}'
+          if css not in html:
+              html=html.replace('.red{background:#fdecec;color:#922f2f}', '.red{background:#fdecec;color:#922f2f}'+css)
+          marker='const money=n=>new Intl.NumberFormat("ar-SA",{style:"currency",currency:"SAR",maximumFractionDigits:0}).format(Number(n||0));'
+          helper='const moneyHtml=n=>Number(n)<0?`<span class="negative-amount">${money(n)}</span>`:money(n);'
+          if helper not in html:
+              if marker not in html:
+                  raise SystemExit('money formatter marker not found')
+              html=html.replace(marker, marker+helper, 1)
+          html=html.replace('${money(', '${moneyHtml(')
+          p.write_text(html,encoding='utf-8')
+          PY
+      - name: Commit change
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Style negative amounts bold red' || exit 0
+          git push
