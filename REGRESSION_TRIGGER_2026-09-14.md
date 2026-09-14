@@ -1,0 +1,1 @@
+Protected regression trigger after restoring professional payment reports and full Arabic/English interface support. No production promotion is authorized by this file.
