@@ -1,0 +1,37 @@
+name: Fix bank add pointer event
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-bank-pointer-event.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix add bank click handler
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='addBankBtn.onclick=openBankModal'
+          new='addBankBtn.onclick=()=>openBankModal()'
+          if old not in s:
+              raise SystemExit('target handler not found')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Fix bank add PointerEvent id bug' || exit 0
+          git push
