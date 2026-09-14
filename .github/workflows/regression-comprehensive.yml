@@ -1,0 +1,68 @@
+name: Sanam Finance Comprehensive Regression
+
+on:
+  push:
+    branches: [dev-baseline-restoration-2026-09-14]
+    paths:
+      - 'REGRESSION_TRIGGER_2026-09-14.md'
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-baseline-restoration-2026-09-14
+      - name: Static protected baseline regression
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          required_pages=['dashboard','banks','payments','posted','tasks','close','imprest','performance','ownership','exceptions','audit']
+          for x in required_pages:
+              assert f'id="{x}"' in s, f'missing page {x}'
+          for role in ['CFO','Supervisor','BankAccountant','GLAccountant','ARAccountant','APAccountant']:
+              assert role in s, f'missing role {role}'
+          functions=['openBankModal','saveBank','openPaymentModal','savePayment','supervisorApprove','cfoApprove','executePayment','postPayment','openTaskModal','saveTask','openCloseModal','saveClose','openImprestModal','saveImprest','openExceptionModal','saveException','loadAudit','openPaymentReport','previewPaymentReport','exportPaymentReportCsv','printPaymentReport','copyPaymentReportEmailSummary','toggleLanguage','applyLanguage']
+          for fn in functions:
+              assert re.search(rf'(async\s+)?function\s+{fn}\s*\(',s), f'missing function {fn}'
+          bilingual=['id="authLangBtn"','id="langBtn"','const I18N_AR_EN=','BILINGUAL_EXTENSIONS_APPLIED','dir=currentLang==="en"?"ltr":"rtl"','Financial Control Center','Chief Financial Officer','Accounts Supervisor']
+          for x in bilingual: assert x in s, f'missing bilingual invariant {x}'
+          reports=['id="paymentReportBtn"','pr_from','pr_to','pr_company','pr_status','pr_bank','pr-col','PAYMENT_REPORT_COLUMNS','Export CSV','Print / PDF','Copy Email Summary']
+          for x in reports: assert x in s, f'missing report invariant {x}'
+          assert 'paymentReportBtn.classList.toggle("hidden",!["CFO","Supervisor","BankAccountant"].includes(profile.role))' in s, 'report role permission changed'
+          assert 'audit_log_actor_id_fkey' in s and 'entity_type' in s, 'audit log fix missing'
+          assert '.negative-amount' in s and 'font-weight:700' in s, 'negative style missing'
+          assert '${moneyHtml(n)}' not in s, 'recursive money formatter regression'
+          assert 'addEventListener("click",openBankModal)' not in s, 'duplicate bank click regression'
+          assert 'supervisor_approve_payment' in s and 'cfo_approve_payment' in s and 'execute_payment' in s and 'post_payment' in s, 'payment RPC linkage changed'
+          assert "if(/^[=+@-]/.test(x)" in s, 'CSV formula injection protection missing'
+          # exact page access baseline fragments
+          expected={
+          'CFO':'["dashboard","banks","payments","posted","tasks","close","imprest","performance","ownership","exceptions","audit"]',
+          'Supervisor':'["dashboard","banks","payments","posted","tasks","close","imprest","performance","ownership","exceptions"]',
+          'BankAccountant':'["dashboard","banks","payments","posted","tasks","close","imprest","exceptions"]',
+          'GLAccountant':'["dashboard","payments","posted","tasks","close","exceptions"]',
+          'ARAccountant':'["dashboard","tasks","close","performance","exceptions"]',
+          'APAccountant':'["dashboard","payments","posted","tasks","close","imprest","performance","exceptions"]'}
+          for role,arr in expected.items():
+              assert f'{role}:{arr}' in s, f'page access regression for {role}'
+          print('Static protected baseline regression: PASS')
+          PY
+      - name: JavaScript syntax regression
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:[^>]*)>(.*?)</script>',s,re.S)
+          Path('/tmp/sanam-inline.js').write_text('\n'.join(scripts),encoding='utf-8')
+          PY
+          node --check /tmp/sanam-inline.js
+      - name: Verify no obsolete repair workflow remains in dev
+        run: |
+          test ! -f .github/workflows/restore-reports-bilingual.yml
+          test ! -f .github/workflows/fix-all-add-actions.yml
+          test ! -f .github/workflows/fix-bank-modal.yml
