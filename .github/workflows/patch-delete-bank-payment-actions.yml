@@ -1,0 +1,58 @@
+name: Patch delete bank and payment actions
+on:
+  push:
+    branches: [feature-delete-bank-payment-2026-09-14]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Patch index.html
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text()
+          marker='/* DELETE_BANK_PAYMENT_ACTIONS_2026_09_14 */'
+          if marker in s:
+              print('already patched')
+              raise SystemExit(0)
+
+          s=s.replace('const I18N_EN_AR=Object.fromEntries(Object.entries(I18N_AR_EN).map(([a,e])=>[e,a]));', 'I18N_AR_EN["حذف"]="Delete";\nI18N_AR_EN["لا يمكن حذف دفعة تم تنفيذها أو ترحيلها."]="Executed or posted payments cannot be deleted.";\nI18N_AR_EN["لا يمكن حذف الحساب البنكي طالما توجد مدفوعات مرتبطة به."]="The bank account cannot be deleted while payment records reference it.";\nconst I18N_EN_AR=Object.fromEntries(Object.entries(I18N_AR_EN).map(([a,e])=>[e,a]));')
+
+          bank_re=r'function renderBanks\(\)\{.*?\}\nfunction openBankModal'
+          bank_new='''function renderBanks(){const canDelete=["CFO","Supervisor","BankAccountant"].includes(profile.role);banksBody.innerHTML=banks.map(b=>`<tr><td>${esc(b.company)}</td><td>${esc(b.bank_name)}</td><td>${esc(b.account_name)}</td><td>${moneyHtml(b.balance)}</td><td>${moneyHtml(b.reserved_balance)}</td><td>${moneyHtml(b.available_balance)}</td><td>${fmt(b.updated_at)}</td><td><button class="btn" onclick="openBankModal('${b.id}')">${displayText('تعديل')}</button>${canDelete?` <button class="btn danger" onclick="deleteBankAccount('${b.id}')">${displayText('حذف')}</button>`:''}</td></tr>`).join("")}\nfunction openBankModal'''
+          s,n=re.subn(bank_re,bank_new,s,count=1,flags=re.S)
+          if n!=1: raise SystemExit(f'bank render patch failed: {n}')
+
+          save_anchor='async function saveBank(id=""){const payload={company:val("b_company"),bank_name:val("b_bank"),account_name:val("b_name"),account_no:val("b_no")||null,balance:Number(val("b_balance")||0),created_by:profile.id,updated_at:new Date().toISOString()};let q=id?sb.from("bank_accounts").update(payload).eq("id",id):sb.from("bank_accounts").insert(payload);const {error}=await q;if(error)return alert(error.message);closeModal();await reloadAll()}'
+          delete_bank='''\nasync function deleteBankAccount(id){\n if(!["CFO","Supervisor","BankAccountant"].includes(profile.role))return;\n const b=banks.find(x=>x.id===id);if(!b)return;\n const msg=currentLang==='en'?`Delete bank account “${b.bank_name} — ${b.account_name}”? This cannot be undone.`:`هل تريد حذف الحساب البنكي «${b.bank_name} — ${b.account_name}»؟ لا يمكن التراجع عن الحذف.`;\n if(!confirm(msg))return;\n const {error}=await sb.rpc("delete_bank_account",{p_bank_account_id:id});\n if(error){const m=String(error.message||'');if(m.includes('payment records reference'))return alert(displayText('لا يمكن حذف الحساب البنكي طالما توجد مدفوعات مرتبطة به.'));return alert(m)}\n await reloadAll();\n}\n'''
+          if save_anchor not in s: raise SystemExit('saveBank anchor missing')
+          s=s.replace(save_anchor,save_anchor+delete_bank,1)
+
+          pay_re=r'function paymentActions\(p\)\{.*?\}\nfunction openPaymentModal'
+          pay_new='''function paymentActions(p){let a=[];if(profile.role==="Supervisor"&&p.supervisor_status==="معلق")a.push(`<button class="btn success" onclick="supervisorApprove('${p.id}')">${displayText('اعتماد المشرف')}</button>`);if(profile.role==="CFO"&&p.supervisor_status==="موافق"&&p.cfo_status==="معلق")a.push(`<button class="btn success" onclick="cfoApprove('${p.id}')">${displayText('اعتماد CFO')}</button>`);if(profile.role==="BankAccountant"&&p.cfo_status==="موافق"&&!p.executed_at)a.push(`<button class="btn success" onclick="executePayment('${p.id}')">${displayText('تم التنفيذ')}</button>`);if(profile.role==="GLAccountant"&&p.executed_at&&p.status!=="مرحّل")a.push(`<button class="btn success" onclick="postPayment('${p.id}')">${displayText('مرحّل')}</button>`);if(["CFO","Supervisor","BankAccountant"].includes(profile.role)&&!p.executed_at&&!p.posted_at&&p.status!=="مرحّل")a.push(`<button class="btn danger" onclick="deleteRequestedPayment('${p.id}')">${displayText('حذف')}</button>`);return a.join(" ")||"—"}\nasync function deleteRequestedPayment(id){\n if(!["CFO","Supervisor","BankAccountant"].includes(profile.role))return;\n const p=payments.find(x=>x.id===id);if(!p)return;\n if(p.executed_at||p.posted_at||p.status==="مرحّل")return alert(displayText('لا يمكن حذف دفعة تم تنفيذها أو ترحيلها.'));\n const msg=currentLang==='en'?`Delete requested payment for “${p.beneficiary}” amount ${money(p.amount)}? This cannot be undone.`:`هل تريد حذف الدفعة المطلوبة للمستفيد «${p.beneficiary}» بمبلغ ${money(p.amount)}؟ لا يمكن التراجع عن الحذف.`;\n if(!confirm(msg))return;\n const {error}=await sb.rpc("delete_requested_payment",{p_payment_id:id});\n if(error){const m=String(error.message||'');if(m.includes('Executed or posted'))return alert(displayText('لا يمكن حذف دفعة تم تنفيذها أو ترحيلها.'));return alert(m)}\n await reloadAll();\n}\nfunction openPaymentModal'''
+          s,n=re.subn(pay_re,pay_new,s,count=1,flags=re.S)
+          if n!=1: raise SystemExit(f'payment action patch failed: {n}')
+
+          s=s.replace('</script>',marker+'\n</script>',1)
+          p.write_text(s)
+          PY
+          node -e "const fs=require('fs');const s=fs.readFileSync('index.html','utf8');const m=s.match(/<script>([\\s\\S]*)<\\/script>/);if(!m)throw new Error('script block missing');new Function(m[1]);"
+          grep -q 'deleteBankAccount' index.html
+          grep -q 'deleteRequestedPayment' index.html
+          grep -q 'DELETE_BANK_PAYMENT_ACTIONS_2026_09_14' index.html
+      - name: Commit patch
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "sanam-automation"
+          git config user.email "sanam-automation@users.noreply.github.com"
+          git add index.html
+          git commit -m "Add controlled delete actions for banks and requested payments"
+          git push
