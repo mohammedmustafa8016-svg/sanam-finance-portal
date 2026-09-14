@@ -138,7 +138,39 @@ function filteredPaymentReportRows(){const f=val('pr_from'),t=val('pr_to'),co=va
 function previewPaymentReport(){const out=document.getElementById('paymentReportOutput');if(!out)return;const cols=selectedPaymentReportColumns(),rows=filteredPaymentReportRows(),total=rows.reduce((a,p)=>a+Number(p.amount||0),0);out.innerHTML=`<div class="report-summary"><div class="card kpi"><span>${displayText('عدد الدفعات')}</span><b>${rows.length}</b></div><div class="card kpi"><span>${displayText('إجمالي المبلغ')}</span><b>${moneyHtml(total)}</b></div><div class="card kpi"><span>${displayText('الفترة من')}</span><b style="font-size:15px">${esc(val('pr_from')||'—')} → ${esc(val('pr_to')||'—')}</b></div></div><div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${esc(reportColumnLabel(c))}</th>`).join('')}</tr></thead><tbody>${rows.map(p=>`<tr>${cols.map(c=>`<td>${c.key==='amount'?moneyHtml(p.amount):esc(paymentReportValue(p,c.key))}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${Math.max(cols.length,1)}">—</td></tr>`}</tbody></table></div>`;applyLanguage(out)}
 function csvCell(v){let x=String(v??'');if(/^[=+@-]/.test(x)&&!/^-[0-9.,]+$/.test(x))x="'"+x;return `"${x.replace(/"/g,'""')}"`}
 function exportPaymentReportCsv(){const cols=selectedPaymentReportColumns(),rows=filteredPaymentReportRows(),lines=[cols.map(c=>csvCell(reportColumnLabel(c))).join(',')];rows.forEach(p=>lines.push(cols.map(c=>csvCell(c.key==='amount'?Number(p.amount||0).toFixed(2):paymentReportValue(p,c.key))).join(',')));const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Sanam_Payments_${val('pr_from')||'all'}_${val('pr_to')||'all'}.csv`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},100)}
-function paymentReportPrintableHtml(){const cols=selectedPaymentReportColumns(),rows=filteredPaymentReportRows(),total=rows.reduce((a,p)=>a+Number(p.amount||0),0);return `<!doctype html><html lang="${currentLang}" dir="${currentLang==='en'?'ltr':'rtl'}"><head><meta charset="utf-8"><title>Sanam Finance - ${displayText('تقرير المدفوعات')}</title><style>body{font-family:Arial,Tahoma,sans-serif;padding:24px;color:#172033}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d7dde5;padding:7px;text-align:${currentLang==='en'?'left':'right'}}th{background:#f3f5f8}.neg{color:#a43f3f;font-weight:700}</style></head><body><h1>Sanam Finance Portal</h1><p>${displayText('تقرير المدفوعات الاحترافي')} | ${esc(val('pr_from')||'—')} → ${esc(val('pr_to')||'—')}</p><p><b>${displayText('عدد الدفعات')}:</b> ${rows.length} &nbsp; <b>${displayText('إجمالي المبلغ')}:</b> ${money(total)}</p><table><thead><tr>${cols.map(c=>`<th>${esc(reportColumnLabel(c))}</th>`).join('')}</tr></thead><tbody>${rows.map(p=>`<tr>${cols.map(c=>`<td class="${c.key==='amount'&&Number(p.amount)<0?'neg':''}">${esc(paymentReportValue(p,c.key))}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`}
+function paymentReportPrintableHtml(){
+ const cols=selectedPaymentReportColumns(),rows=filteredPaymentReportRows(),total=rows.reduce((a,p)=>a+Number(p.amount||0),0);
+ const landscape=cols.length>7;
+ const company=val('pr_company')||displayText('كل الشركات');
+ const status=val('pr_status')?displayText(val('pr_status')):displayText('كل الحالات');
+ const bankId=val('pr_bank');
+ const bankObj=bankId?banks.find(b=>b.id===bankId):null;
+ const bank=bankId?(bankObj?`${bankObj.bank_name} — ${bankObj.account_name} (${bankObj.company})`:bankId):displayText('كل الحسابات');
+ const from=val('pr_from')||displayText('الكل'),to=val('pr_to')||displayText('الكل');
+ const labels=currentLang==='en'?{period:'Period',company:'Company',status:'Status',bank:'Bank Account',count:'Payment Count',total:'Total Amount'}:{period:'الفترة',company:'الشركة',status:'الحالة',bank:'حساب البنك',count:'عدد الدفعات',total:'إجمالي المبلغ'};
+ const filters=[
+  [labels.period,`${from} → ${to}`],
+  [labels.company,company],
+  [labels.status,status],
+  [labels.bank,bank]
+ ];
+ const dir=currentLang==='en'?'ltr':'rtl',align=currentLang==='en'?'left':'right';
+ return `<!doctype html><html lang="${currentLang}" dir="${dir}"><head><meta charset="utf-8"><title>Sanam Finance - ${displayText('تقرير المدفوعات')}</title><style>
+ @page{size:A4 ${landscape?'landscape':'portrait'};margin:10mm}
+ *{box-sizing:border-box}html,body{direction:${dir}}body{font-family:"Dubai","Segoe UI","Noto Sans Arabic",Tahoma,Arial,sans-serif;padding:0;margin:0;color:#172033;background:#fff;text-align:${align}}
+ .header{border-bottom:2px solid #0f2740;padding-bottom:10px;margin-bottom:12px}.header h1{margin:0 0 4px;font-size:20px}.header .sub{font-size:12px;color:#475467}
+ .filters{display:grid;grid-template-columns:${landscape?'repeat(4,minmax(0,1fr))':'repeat(2,minmax(0,1fr))'};gap:7px;margin:10px 0 12px}.filter{border:1px solid #d7dde5;border-radius:5px;padding:7px 9px;min-width:0}.filter b{display:block;font-size:9px;color:#667085;margin-bottom:2px}.filter span{display:block;font-size:10px;white-space:normal;overflow-wrap:anywhere}
+ .summary{display:flex;gap:14px;flex-wrap:wrap;margin:0 0 12px;font-size:11px}.summary .item{border:1px solid #d7dde5;border-radius:5px;padding:7px 10px;background:#f8fafc}.summary b{margin-${currentLang==='en'?'right':'left'}:4px}
+ table{width:100%;border-collapse:collapse;font-size:${landscape?'8.5':'9.5'}px;table-layout:auto}thead{display:table-header-group}tr{page-break-inside:avoid}th,td{border:1px solid #d7dde5;padding:${landscape?'5':'6'}px;text-align:${align};vertical-align:top;white-space:normal;overflow-wrap:anywhere}th{background:#eef2f6;color:#334155;font-weight:700}.neg{color:#a43f3f;font-weight:700}
+ .footer{margin-top:8px;font-size:8px;color:#667085;text-align:center}
+ @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.header,.filters,.summary{page-break-inside:avoid}}
+ </style></head><body>
+ <div class="header"><h1>Sanam Finance Portal</h1><div class="sub">${displayText('تقرير المدفوعات الاحترافي')}</div></div>
+ <div class="filters">${filters.map(([k,v])=>`<div class="filter"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('')}</div>
+ <div class="summary"><div class="item"><b>${esc(labels.count)}:</b> ${rows.length}</div><div class="item"><b>${esc(labels.total)}:</b> ${esc(money(total))}</div></div>
+ <table><thead><tr>${cols.map(c=>`<th>${esc(reportColumnLabel(c))}</th>`).join('')}</tr></thead><tbody>${rows.map(p=>`<tr>${cols.map(c=>`<td class="${c.key==='amount'&&Number(p.amount)<0?'neg':''}">${esc(paymentReportValue(p,c.key))}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${Math.max(cols.length,1)}">—</td></tr>`}</tbody></table>
+ <div class="footer">Sanam Finance Portal</div></body></html>`
+}
 function printPaymentReport(){const w=window.open('','_blank');if(!w)return alert(currentLang==='en'?'Popup was blocked.':'تم حظر النافذة المنبثقة.');w.document.write(paymentReportPrintableHtml());w.document.close();setTimeout(()=>w.print(),250)}
 async function copyPaymentReportEmailSummary(){const rows=filteredPaymentReportRows(),total=rows.reduce((a,p)=>a+Number(p.amount||0),0),txt=currentLang==='en'?`Sanam Payments Report\nPeriod: ${val('pr_from')||'All'} to ${val('pr_to')||'All'}\nPayments: ${rows.length}\nTotal: ${money(total)}`:`تقرير مدفوعات سنام\nالفترة: ${val('pr_from')||'الكل'} إلى ${val('pr_to')||'الكل'}\nعدد الدفعات: ${rows.length}\nالإجمالي: ${money(total)}`;try{await navigator.clipboard.writeText(txt);alert(currentLang==='en'?'Email summary copied.':'تم نسخ ملخص التقرير للبريد.')}catch(e){alert(txt)}}
 
