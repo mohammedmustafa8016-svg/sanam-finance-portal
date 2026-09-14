@@ -2,7 +2,9 @@ name: Payment Report Regression
 on:
   push:
     branches: [dev-payment-report-print-review]
-    paths: ['.github/workflows/payment-report-regression.yml']
+    paths:
+      - 'index.html'
+      - '.github/workflows/payment-report-regression.yml'
 permissions:
   contents: read
 jobs:
@@ -43,9 +45,11 @@ jobs:
             'negative print styling':'.neg{color:#a43f3f;font-weight:700}',
             'csv utf8 bom':"'\\ufeff'+lines.join",
             'csv formula protection':"if(/^[=+@-]/.test(x)",
+            'valid print cell wrapping':'overflow-wrap:anywhere}th{',
           }
           missing=[k for k,v in required.items() if v not in s]
           if missing: raise SystemExit('Missing report controls: '+', '.join(missing))
+          if 'overflow-wrap:anywher}}' in s: raise SystemExit('Malformed print CSS regression detected')
           m=re.search(r'const PAYMENT_REPORT_COLUMNS=\[(.*?)\];',s,re.S)
           if not m: raise SystemExit('Payment report columns definition missing')
           if m.group(1).count('{key:') != 13: raise SystemExit('Expected 13 payment report columns')
