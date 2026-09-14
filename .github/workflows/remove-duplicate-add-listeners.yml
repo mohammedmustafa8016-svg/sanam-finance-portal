@@ -1,0 +1,36 @@
+name: Remove duplicate add button listeners
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/remove-duplicate-add-listeners.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove duplicate listeners that pass PointerEvent
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='document.getElementById("addBankBtn")?.addEventListener("click",openBankModal); document.getElementById("addPaymentBtn")?.addEventListener("click",openPaymentModal); document.getElementById("addTaskBtn")?.addEventListener("click",openTaskModal); document.getElementById("addExceptionBtn")?.addEventListener("click",openExceptionModal); document.getElementById("addCloseBtn")?.addEventListener("click",openCloseModal); document.getElementById("addImprestBtn")?.addEventListener("click",openImprestModal);'
+          if old not in s:
+              raise SystemExit('duplicate listener block not found')
+          s=s.replace(old,'',1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Remove duplicate add listeners causing PointerEvent IDs' || exit 0
+          git push
