@@ -1,0 +1,38 @@
+name: Restore bilingual UI and payment reports v2
+
+on:
+  push:
+    branches: [dev-baseline-restoration-2026-09-14]
+    paths:
+      - 'scripts/restore_reports_bilingual.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-baseline-restoration-2026-09-14
+      - name: Apply restoration
+        run: python scripts/restore_reports_bilingual.py
+      - name: Validate JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          scripts=re.findall(r'<script(?:[^>]*)>(.*?)</script>',s,re.S)
+          Path('/tmp/sanam-inline.js').write_text('\n'.join(scripts),encoding='utf-8')
+          PY
+          node --check /tmp/sanam-inline.js
+      - name: Commit restored features
+        run: |
+          git config user.name 'Sanam Finance Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Restore professional payment reports and bilingual UI' || exit 0
+          git push
