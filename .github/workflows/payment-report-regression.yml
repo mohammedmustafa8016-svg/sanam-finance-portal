@@ -1,0 +1,74 @@
+name: Payment Report Regression
+on:
+  push:
+    branches: [dev-payment-report-print-review]
+    paths:
+      - 'index.html'
+      - '.github/workflows/payment-report-regression.yml'
+permissions:
+  contents: read
+jobs:
+  report-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev-payment-report-print-review
+      - name: Validate report implementation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          required={
+            'report modal':'function openPaymentReport()',
+            'date-from filter':"val('pr_from')",
+            'date-to filter':"val('pr_to')",
+            'company filter':"val('pr_company')",
+            'status filter':"val('pr_status')",
+            'bank filter':"val('pr_bank')",
+            'column selector':'selectedPaymentReportColumns()',
+            'preview':'function previewPaymentReport()',
+            'csv':'function exportPaymentReportCsv()',
+            'print':'function printPaymentReport()',
+            'email summary':'function copyPaymentReportEmailSummary()',
+            'landscape threshold':'const landscape=cols.length>7;',
+            'A4 adaptive page':'@page{size:A4 ${landscape?',
+            'Dubai font':'font-family:"Dubai","Segoe UI","Noto Sans Arabic"',
+            'RTL/LTR':'const dir=currentLang===\'en\'?\'ltr\':\'rtl\'',
+            'period filter in print':'[labels.period,`${from} → ${to}`]',
+            'company filter in print':'[labels.company,company]',
+            'status filter in print':'[labels.status,status]',
+            'bank filter in print':'[labels.bank,bank]',
+            'repeat table header':'thead{display:table-header-group}',
+            'avoid row split':'tr{page-break-inside:avoid}',
+            'negative print styling':'.neg{color:#a43f3f;font-weight:700}',
+            'csv utf8 bom':"'\\ufeff'+lines.join",
+            'csv formula protection':"if(/^[=+@-]/.test(x)",
+            'valid print cell wrapping':'overflow-wrap:anywhere}th{',
+          }
+          missing=[k for k,v in required.items() if v not in s]
+          if missing: raise SystemExit('Missing report controls: '+', '.join(missing))
+          if 'overflow-wrap:anywher}}' in s: raise SystemExit('Malformed print CSS regression detected')
+          m=re.search(r'const PAYMENT_REPORT_COLUMNS=\[(.*?)\];',s,re.S)
+          if not m: raise SystemExit('Payment report columns definition missing')
+          if m.group(1).count('{key:') != 13: raise SystemExit('Expected 13 payment report columns')
+          if 'function moneyHtml' in s and '${moneyHtml(n)}' in s: raise SystemExit('moneyHtml recursion regression')
+          print('Payment report static regression: PASS')
+          PY
+      - name: JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          m=re.search(r'<script>(.*)</script>',s,re.S)
+          if not m: raise SystemExit('script block missing')
+          Path('/tmp/app.js').write_text(m.group(1),encoding='utf-8')
+          PY
+          node --check /tmp/app.js
+      - name: Confirm production is untouched
+        run: |
+          git fetch origin main --depth=1
+          test "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)"
+          echo 'Production main remains separate from report review branch.'
