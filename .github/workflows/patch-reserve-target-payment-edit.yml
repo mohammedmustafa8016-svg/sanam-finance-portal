@@ -13,6 +13,7 @@ jobs:
         with:
           ref: feature-reserve-target-report-payment-edit-2026-09-15
       - run: python scripts/patch_reserve_target_payment_edit.py
+      - run: python scripts/fix_reserve_report_newline.py
       - name: Validate markers and JS syntax
         run: |
           grep -q 'RESERVE_TARGET_PAYMENT_EDIT_2026_09_15' index.html
