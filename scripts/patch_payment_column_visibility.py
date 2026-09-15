@@ -1,0 +1,29 @@
+from pathlib import Path
+p=Path('index.html')
+s=p.read_text()
+marker='/* PAYMENT_LIST_COLUMN_VISIBILITY_2026_09_15 */'
+if marker in s:
+    print('already patched'); raise SystemExit(0)
+s=s.replace('/* RESERVE_TARGET_PAYMENT_EDIT_2026_09_15 */','/* RESERVE_TARGET_PAYMENT_EDIT_2026_09_15 */\n'+marker,1)
+old='''<section id="payments" class="section"><div class="row" style="margin-bottom:12px"><h3>المدفوعات والاعتمادات</h3><div class="lang-actions"><button id="paymentReportBtn" class="btn" type="button" onclick="openPaymentReport()">تقرير المدفوعات</button><button id="addPaymentBtn" class="btn primary" type="button" onclick="openPaymentModal()">+ إضافة دفعة</button></div></div><div class="table-wrap"><table><thead><tr><th>الاستحقاق</th><th>الشركة</th><th>المستفيد</th><th>المبلغ</th><th>الحساب</th><th>المشرف</th><th>CFO</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="paymentsBody"></tbody></table></div></section>'''
+new='''<section id="payments" class="section"><div class="row" style="margin-bottom:12px"><h3>المدفوعات والاعتمادات</h3><div class="lang-actions"><button id="paymentColumnsBtn" class="btn" type="button" onclick="openPaymentColumnSettings()">تخصيص الأعمدة</button><button id="paymentReportBtn" class="btn" type="button" onclick="openPaymentReport()">تقرير المدفوعات</button><button id="addPaymentBtn" class="btn primary" type="button" onclick="openPaymentModal()">+ إضافة دفعة</button></div></div><div class="table-wrap"><table id="paymentsTable"><thead><tr><th>الاستحقاق</th><th>الشركة</th><th>المستفيد</th><th>المبلغ</th><th>الحساب</th><th>المشرف</th><th>CFO</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="paymentsBody"></tbody></table></div></section>'''
+assert old in s, 'payments section not found'
+s=s.replace(old,new,1)
+old='''function renderPayments(){const active=payments.filter(p=>p.status!=="مرحّل"),posted=payments.filter(p=>p.status==="مرحّل");paymentsBody.innerHTML=active.map(p=>`<tr><td>${esc(p.due_date)}</td><td>${esc(p.company)}</td><td>${esc(p.beneficiary)}</td><td>${moneyHtml(p.amount)}</td><td>${esc(bankLabel(p))}</td><td>${badge(p.supervisor_status)}</td><td>${badge(p.cfo_status)}</td><td>${badge(p.status)}</td><td>${paymentActions(p)}</td></tr>`).join("");postedBody.innerHTML=posted.map(p=>`<tr><td>${fmt(p.posted_at)}</td><td>${esc(p.company)}</td><td>${esc(p.beneficiary)}</td><td>${moneyHtml(p.amount)}</td><td>${esc(bankLabel(p))}</td><td>${esc(p.purpose||"—")}</td></tr>`).join("")}'''
+new='''const PAYMENT_LIST_COLUMNS=[
+ {key:'due_date',label:'الاستحقاق',index:1},{key:'company',label:'الشركة',index:2},{key:'beneficiary',label:'المستفيد',index:3},{key:'amount',label:'المبلغ',index:4},{key:'bank',label:'الحساب',index:5},{key:'supervisor',label:'المشرف',index:6},{key:'cfo',label:'CFO',index:7},{key:'status',label:'الحالة',index:8},{key:'actions',label:'إجراء',index:9}
+];
+function paymentColumnStorageKey(){return `sanam_payment_columns_${profile?.id||'default'}`}
+function getPaymentVisibleColumns(){try{const raw=localStorage.getItem(paymentColumnStorageKey());if(!raw)return PAYMENT_LIST_COLUMNS.map(c=>c.key);const v=JSON.parse(raw);return Array.isArray(v)&&v.length?v:PAYMENT_LIST_COLUMNS.map(c=>c.key)}catch{return PAYMENT_LIST_COLUMNS.map(c=>c.key)}}
+function applyPaymentColumnVisibility(){const table=document.getElementById('paymentsTable');if(!table)return;const visible=new Set(getPaymentVisibleColumns());PAYMENT_LIST_COLUMNS.forEach(c=>{table.querySelectorAll(`tr > *:nth-child(${c.index})`).forEach(el=>el.classList.toggle('hidden',!visible.has(c.key)))})}
+function openPaymentColumnSettings(){const current=new Set(getPaymentVisibleColumns());showModal('تخصيص أعمدة قائمة المدفوعات',`<div class="note">حدد الأعمدة التي تريد ظهورها في قائمة المدفوعات. يتم حفظ الاختيار لهذا المستخدم على هذا الجهاز دون التأثير على البيانات أو التقارير.</div><div class="report-columns" style="margin-top:12px">${PAYMENT_LIST_COLUMNS.map(c=>`<label><input type="checkbox" class="payment-column-choice" value="${c.key}" ${current.has(c.key)?'checked':''}> ${displayText(c.label)}</label>`).join('')}</div><div class="row" style="margin-top:14px"><button class="btn" onclick="resetPaymentColumns()">${displayText('إظهار الكل')}</button><button class="btn primary" onclick="savePaymentColumnSettings()">${displayText('حفظ')}</button></div>`)}
+function savePaymentColumnSettings(){const selected=[...document.querySelectorAll('.payment-column-choice:checked')].map(x=>x.value);if(!selected.length)return alert(displayText('يجب اختيار عمود واحد على الأقل.'));localStorage.setItem(paymentColumnStorageKey(),JSON.stringify(selected));closeModal();applyPaymentColumnVisibility()}
+function resetPaymentColumns(){localStorage.setItem(paymentColumnStorageKey(),JSON.stringify(PAYMENT_LIST_COLUMNS.map(c=>c.key)));closeModal();applyPaymentColumnVisibility()}
+function renderPayments(){const active=payments.filter(p=>p.status!=="مرحّل"),posted=payments.filter(p=>p.status==="مرحّل");paymentsBody.innerHTML=active.map(p=>`<tr><td>${esc(p.due_date)}</td><td>${esc(p.company)}</td><td>${esc(p.beneficiary)}</td><td>${moneyHtml(p.amount)}</td><td>${esc(bankLabel(p))}</td><td>${badge(p.supervisor_status)}</td><td>${badge(p.cfo_status)}</td><td>${badge(p.status)}</td><td>${paymentActions(p)}</td></tr>`).join("");postedBody.innerHTML=posted.map(p=>`<tr><td>${fmt(p.posted_at)}</td><td>${esc(p.company)}</td><td>${esc(p.beneficiary)}</td><td>${moneyHtml(p.amount)}</td><td>${esc(bankLabel(p))}</td><td>${esc(p.purpose||"—")}</td></tr>`).join("");applyPaymentColumnVisibility()}'''
+assert old in s, 'renderPayments not found'
+s=s.replace(old,new,1)
+needle='''Object.assign(I18N_AR_EN,{'''
+assert needle in s
+s=s.replace(needle,'''Object.assign(I18N_AR_EN,{\n"تخصيص الأعمدة":"Choose Columns","تخصيص أعمدة قائمة المدفوعات":"Customize Payment List Columns","إظهار الكل":"Show All","يجب اختيار عمود واحد على الأقل.":"Select at least one column.",''',1)
+p.write_text(s)
+print('patched')
