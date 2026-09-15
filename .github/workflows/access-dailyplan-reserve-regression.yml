@@ -1,0 +1,43 @@
+name: Access Daily Plan Reserve Regression
+on:
+  push:
+    branches: [feature-access-dailyplan-reserve-report-2026-09-15]
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static regression checks
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          required=[
+            'ACCESS_DAILYPLAN_RESERVE_REPORT_2026_09_15','إدارة الصلاحيات والظهور','get_my_permissions','set_user_permission',
+            'get_visible_bank_liquidity','get_bank_account_directory','data.bank_balances','مركز التشغيل اليومي وعبء العمل',
+            'save_flexible_daily_plan','إضافة مهمة جديدة مباشرة إلى خطة اليوم','الرصيد المرجعي / الافتراضي',
+            'تقرير الحسابات المحمية','get_reserve_account_report','exportReserveReportCsv','printReserveReport',
+            'DELETE_BANK_PAYMENT_ACTIONS_2026_09_14','OPS_CONTROL_V2_2026_09_14','CFO_MONITOR_RESERVES_2026_09_15',
+            'PAYMENT_REPORT_COLUMNS','deleteRequestedPayment','deleteBankAccount','openHeaderFilter','monthly_close_tasks',
+            'openPerformanceDrilldown','review_finance_task','mark_task_blocker'
+          ]
+          missing=[x for x in required if x not in s]
+          assert not missing, f'Missing: {missing}'
+          assert 'data-page="workload"' not in s, 'standalone workload nav still present'
+          assert "profile.role!==\"Supervisor\"" not in s[s.find('dailyPlanBtn'):s.find('dailyPlanBtn')+500], 'daily plan still supervisor-only'
+          m=Path('supabase/migrations/20260915_access_dailyplan_reserve_report.sql').read_text()
+          for x in ['user_permissions','reference_balance','get_visible_bank_liquidity','save_flexible_daily_plan','get_reserve_account_report']:
+            assert x in m, x
+          print('Access/daily-plan/reserve static regression: PASS')
+          PY
+      - name: JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text()
+          scripts=re.findall(r'<script(?: [^>]*)?>(.*?)</script>',s,re.S)
+          inline='\n'.join(x for x in scripts if x.strip() and 'src=' not in x[:80])
+          Path('/tmp/app.js').write_text(inline)
+          PY
+          node --check /tmp/app.js
