@@ -1,0 +1,36 @@
+name: Patch CFO monitor reserves
+on:
+  push:
+    branches: [feature-cfo-monitor-reserve-accounts-2026-09-15]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'sanam-automation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Patch UI
+        run: python scripts/patch_cfo_monitor_reserves.py
+      - name: Validate JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text()
+          scripts=re.findall(r'<script(?: [^>]*)?>(.*?)</script>',s,re.S)
+          inline='\n'.join(x for x in scripts if x.strip() and 'src=' not in x[:80])
+          Path('/tmp/app.js').write_text(inline)
+          PY
+          node --check /tmp/app.js
+      - name: Commit UI patch
+        run: |
+          if git diff --quiet -- index.html; then exit 0; fi
+          git config user.name "sanam-automation"
+          git config user.email "sanam-automation@users.noreply.github.com"
+          git add index.html
+          git commit -m "Implement CFO monitor and reserve account UI"
+          git push
