@@ -1,0 +1,36 @@
+name: Patch Reserve Target Payment Edit
+on:
+  push:
+    branches: [feature-reserve-target-report-payment-edit-2026-09-15]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[skip patch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature-reserve-target-report-payment-edit-2026-09-15
+      - run: python scripts/patch_reserve_target_payment_edit.py
+      - name: Validate markers and JS syntax
+        run: |
+          grep -q 'RESERVE_TARGET_PAYMENT_EDIT_2026_09_15' index.html
+          grep -q 'الرصيد المستهدف' index.html
+          grep -q 'get_reserve_account_movement_report' index.html
+          grep -q 'update_unapproved_payment' index.html
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          js=s.rsplit('<script>',1)[1].split('</script>',1)[0]
+          Path('/tmp/app.js').write_text(js)
+          PY
+          node --check /tmp/app.js
+      - name: Commit patched UI
+        run: |
+          if git diff --quiet index.html; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Apply reserve target reports and payment edit UI [skip patch]'
+          git push
