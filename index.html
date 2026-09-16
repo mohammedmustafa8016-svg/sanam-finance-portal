@@ -15,6 +15,7 @@
 /* CFO_CONTROLS_RESERVE_RECOVERY_2026_09_16 */
 /* DAILY_PLAN_POLICIES_2026_09_16 */
 /* FILTER_RESERVE_PENDING_2026_09_16 */
+/* AUDIT_REFRESH_FIX_2026_09_16 */
 </script>
 <style>
 :root{--nav:#0f2740;--nav2:#183a5b;--bg:#f3f5f8;--card:#fff;--text:#172033;--muted:#667085;--border:#d7dde5;--blue:#315c87;--green:#1f7a5a;--amber:#a66a16;--red:#a43f3f}
@@ -97,7 +98,7 @@ input,select,textarea{width:100%;padding:10px;border:1px solid var(--border);bor
 <section id="performance" class="section"><div class="row" style="margin-bottom:12px"><h3>أداء الفريق</h3></div><div class="note" style="margin-bottom:12px">المؤشرات أدناه تُحتسب مباشرة من المهام الفعلية ودورة الإقفال، ولا تعتمد على تقييم يدوي أو درجة تقديرية.</div><div class="table-wrap"><table><thead><tr><th>الموظف</th><th>الدور</th><th>مهام اليوم</th><th>مكتمل اليوم</th><th>متأخر الآن</th><th>تبريرات معلقة</th><th>بانتظار المراجعة</th><th>إنجاز الشهر</th><th>الإنجاز في الموعد</th><th>إنجاز الإقفال</th></tr></thead><tbody id="performanceBody"></tbody></table></div></section>
 <section id="ownership" class="section"><div class="row" style="margin-bottom:12px"><h3>مصفوفة المسؤوليات</h3></div><div class="table-wrap"><table><thead><tr><th>العملية</th><th>النشاط</th><th>التكرار</th><th>المالك</th><th>المراجع</th><th>المعتمد</th><th>المخرج</th></tr></thead><tbody id="ownershipBody"></tbody></table></div></section>
 <section id="exceptions" class="section"><div class="row" style="margin-bottom:12px"><h3>الاستثناءات والإجازات</h3><div class="lang-actions"><button id="addExceptionBtn" class="btn primary" type="button" onclick="openExceptionModal()">+ إضافة استثناء</button><button id="addPolicyBtn" class="btn primary" type="button" onclick="openPolicyModal()">+ إضافة سياسة</button></div></div><div class="saved-views" style="margin-bottom:12px"><button id="exceptionsTabBtn" class="view-chip active" onclick="switchExceptionsTab('exceptions')">الاستثناءات والإجازات</button><button id="policiesTabBtn" class="view-chip" onclick="switchExceptionsTab('policies')">سياسات الإدارة المالية</button></div><div id="exceptionsPanel"><div id="exceptionsList"></div></div><div id="policiesPanel" class="hidden"><div class="note" style="margin-bottom:12px">السياسات الفعالة ملزمة لفريق الإدارة المالية. يظهر لكل موظف ما إذا كان قد أقر بالاطلاع على النسخة الحالية، وأي تعديل جوهري ينشئ إصدارًا جديدًا يتطلب إقرارًا جديدًا.</div><div id="policiesList"></div></div></section>
-<section id="audit" class="section"><div class="row" style="margin-bottom:12px"><h3>سجل العمليات</h3><button class="btn" onclick="loadAudit()">تحديث</button></div><div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>المستخدم</th><th>الإجراء</th><th>الكيان</th><th>المعرف</th></tr></thead><tbody id="auditBody"></tbody></table></div></section>
+<section id="audit" class="section"><div class="row" style="margin-bottom:12px"><div><h3 style="margin:0">سجل العمليات</h3><div id="auditRefreshStatus" class="muted" style="margin-top:4px"></div></div><button id="auditRefreshBtn" class="btn" type="button" onclick="loadAudit(true)">تحديث</button></div><div class="table-wrap"><table id="auditTable"><thead><tr><th>التاريخ</th><th>المستخدم</th><th>الإجراء</th><th>الكيان</th><th>المعرف</th></tr></thead><tbody id="auditBody"></tbody></table></div></section>
 </div></main></div>
 <div id="modalBg" class="modal-bg"><div class="modal"><div class="row"><h3 id="modalTitle" style="margin:0"></h3><button class="btn" onclick="closeModal()">إغلاق</button></div><div id="modalBody" style="margin-top:14px"></div></div></div>
 <script>
@@ -515,7 +516,19 @@ async function acknowledgePolicy(id){const {error}=await sb.rpc('acknowledge_fin
 async function changePolicyStatus(id,status){if(profile.role!=='CFO')return;const {error}=await sb.rpc('set_finance_policy_status',{p_policy_id:id,p_status:status});if(error)return alert(error.message);await reloadAll();switchExceptionsTab('policies')}
 async function viewPolicyVersions(id){const {data,error}=await sb.rpc('get_finance_policy_versions',{p_policy_id:id});if(error)return alert(error.message);showModal(displayText('سجل الإصدارات'),`<div class="table-wrap"><table><thead><tr><th>${displayText('الإصدار')}</th><th>${displayText('التاريخ')}</th><th>${displayText('المستخدم')}</th><th>${displayText('عنوان السياسة')}</th></tr></thead><tbody>${(data||[]).map(v=>`<tr><td>${v.version_no}.0</td><td>${fmt(v.created_at)}</td><td>${esc(v.created_by_name||'—')}</td><td>${esc(v.snapshot?.title||'—')}</td></tr>`).join('')||'<tr><td colspan="4">—</td></tr>'}</tbody></table></div>`);installTableFilters()}
 
-async function loadAudit(){if(profile.role!=="CFO")return;const {data,error}=await sb.from("audit_log").select("*,actor:profiles!audit_log_actor_id_fkey(full_name,email)").order("created_at",{ascending:false}).limit(200);if(error){auditBody.innerHTML=`<tr><td colspan="5">${esc(error.message)}</td></tr>`;return}auditBody.innerHTML=(data||[]).map(x=>`<tr><td>${fmt(x.created_at)}</td><td>${esc(x.actor?.full_name||x.actor?.email||"—")}</td><td>${esc(x.action)}</td><td>${esc(x.entity_type||"—")}</td><td>${esc(x.entity_id||"—")}</td></tr>`).join("")}
+async function loadAudit(showFeedback=false){
+ if(profile.role!=="CFO")return;
+ const btn=document.getElementById("auditRefreshBtn"),status=document.getElementById("auditRefreshStatus");
+ const oldText=btn?.textContent||displayText("تحديث");
+ if(btn){btn.disabled=true;btn.textContent=currentLang==="en"?"Refreshing...":"جارٍ التحديث..."}
+ if(status&&showFeedback)status.textContent=currentLang==="en"?"Loading latest audit records...":"جارٍ تحميل أحدث سجل للعمليات...";
+ const {data,error}=await sb.from("audit_log").select("*,actor:profiles!audit_log_actor_id_fkey(full_name,email)").order("created_at",{ascending:false}).limit(200);
+ if(error){auditBody.innerHTML=`<tr><td colspan="5">${esc(error.message)}</td></tr>`;if(status)status.textContent=currentLang==="en"?"Refresh failed":"تعذر تحديث السجل";if(btn){btn.disabled=false;btn.textContent=oldText}return}
+ auditBody.innerHTML=(data||[]).map(x=>`<tr><td>${fmt(x.created_at)}</td><td>${esc(x.actor?.full_name||x.actor?.email||"—")}</td><td>${esc(x.action)}</td><td>${esc(x.entity_type||"—")}</td><td>${esc(x.entity_id||"—")}</td></tr>`).join("");
+ const table=document.getElementById("auditTable");if(table){applyTableFilters(table);applyUniversalColumnVisibility?.(table)}
+ if(status)status.textContent=(currentLang==="en"?"Last refreshed: ":"آخر تحديث: ")+new Date().toLocaleTimeString(currentLang==="en"?"en-US":"ar-SA");
+ if(btn){btn.disabled=false;btn.textContent=displayText("تحديث")}
+}
 init();
 </script>
 </body>
