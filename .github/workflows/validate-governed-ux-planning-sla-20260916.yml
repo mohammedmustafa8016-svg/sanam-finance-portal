@@ -3,12 +3,15 @@ on:
   push:
     branches: [feature-governed-ux-planning-sla-2026-09-16]
 permissions:
-  contents: read
+  contents: write
 jobs:
   validate:
+    if: ${{ !contains(github.event.head_commit.message, '[skip generated]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feature-governed-ux-planning-sla-2026-09-16
       - run: python scripts/patch_governed_ux_planning_sla_20260916.py
       - run: python scripts/fix_governed_patch_20260916.py
       - name: Validate
@@ -28,7 +31,11 @@ jobs:
           Path('/tmp/app.js').write_text(js)
           PY
           node --check /tmp/app.js
-      - uses: actions/upload-artifact@v4
-        with:
-          name: patched-index
-          path: index.html
+      - name: Commit validated index
+        run: |
+          if git diff --quiet index.html; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Implement governed UX manual planning SLA and KPI [skip generated]'
+          git push
