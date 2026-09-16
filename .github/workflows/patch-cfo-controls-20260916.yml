@@ -1,0 +1,40 @@
+name: Patch CFO Controls 20260916
+on:
+  push:
+    branches: [feature-cfo-controls-2026-09-16]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[skip patch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature-cfo-controls-2026-09-16
+      - run: python scripts/patch_cfo_controls_20260916.py
+      - name: Validate protected baseline and new controls
+        run: |
+          grep -q 'CFO_CONTROLS_RESERVE_RECOVERY_2026_09_16' index.html
+          grep -q 'get_recoverable_reserve_uses' index.html
+          grep -q 'get_reserve_account_movement_report_v2' index.html
+          grep -q 'profile.role==="CFO"' index.html
+          grep -q 'installUniversalColumnCustomizers' index.html
+          grep -q 'openPaymentReport' index.html
+          grep -q 'openReserveReports' index.html
+          grep -q 'dailyPlanBtn' index.html
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          js=s.rsplit('<script>',1)[1].split('</script>',1)[0]
+          Path('/tmp/app.js').write_text(js)
+          PY
+          node --check /tmp/app.js
+      - name: Commit patched UI
+        run: |
+          if git diff --quiet index.html; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Apply CFO controls and reserve recovery UI [skip patch]'
+          git push
