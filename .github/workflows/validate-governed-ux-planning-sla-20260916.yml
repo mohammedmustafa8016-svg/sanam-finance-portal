@@ -10,6 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python scripts/patch_governed_ux_planning_sla_20260916.py
+      - run: python scripts/fix_governed_patch_20260916.py
       - name: Validate
         run: |
           grep -q 'GOVERNED_UX_PLANNING_SLA_2026_09_16' index.html
@@ -19,6 +20,7 @@ jobs:
           grep -q 'cfo_override_payment_status' index.html
           grep -q 'get_visible_bank_liquidity' index.html
           grep -q 'get_bank_account_directory' index.html
+          grep -q 'saveTaskTemplate' index.html
           python - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text()
