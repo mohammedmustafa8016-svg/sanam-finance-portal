@@ -1,0 +1,18 @@
+name: QA Column Persistence
+on:
+  push:
+    branches: [qa-column-persistence-2026-09-16]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm init -y
+      - run: npm install playwright@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/test_column_persistence.mjs
