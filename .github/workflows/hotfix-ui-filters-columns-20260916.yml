@@ -1,0 +1,38 @@
+name: Hotfix UI Filters Columns Reserve
+on:
+  push:
+    branches: [hotfix-ui-filters-columns-bank-balance-2026-09-16]
+permissions:
+  contents: write
+jobs:
+  validate:
+    if: ${{ !contains(github.event.head_commit.message, '[skip generated]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hotfix-ui-filters-columns-bank-balance-2026-09-16
+      - run: python scripts/hotfix_ui_filters_columns_20260916.py
+      - name: Validate protected UI features
+        run: |
+          grep -q 'UI_FILTER_COLUMN_RESERVE_HOTFIX_2026_09_16' index.html
+          grep -q 'function safeRender' index.html
+          grep -q 'function installUniversalColumnCustomizers' index.html
+          grep -q 'function installTableFilters' index.html
+          grep -q 'function openUniversalColumnSettings' index.html
+          grep -q 'const canMove=canBankBalances' index.html
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          js=s.rsplit('<script>',1)[1].split('</script>',1)[0]
+          Path('/tmp/app.js').write_text(js)
+          PY
+          node --check /tmp/app.js
+      - name: Commit validated UI hotfix
+        run: |
+          if git diff --quiet index.html; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Restore reserve cards filters and column controls [skip generated]'
+          git push
