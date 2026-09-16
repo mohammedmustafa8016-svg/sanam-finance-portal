@@ -1,0 +1,32 @@
+name: Validate Governed UX Planning SLA
+on:
+  push:
+    branches: [feature-governed-ux-planning-sla-2026-09-16]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python scripts/patch_governed_ux_planning_sla_20260916.py
+      - name: Validate
+        run: |
+          grep -q 'GOVERNED_UX_PLANNING_SLA_2026_09_16' index.html
+          grep -q 'data-page="permissions"' index.html
+          grep -q 'save_manual_daily_plan' index.html
+          grep -q 'get_payment_accounting_queue' index.html
+          grep -q 'cfo_override_payment_status' index.html
+          grep -q 'get_visible_bank_liquidity' index.html
+          grep -q 'get_bank_account_directory' index.html
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          js=s.rsplit('<script>',1)[1].split('</script>',1)[0]
+          Path('/tmp/app.js').write_text(js)
+          PY
+          node --check /tmp/app.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: patched-index
+          path: index.html
