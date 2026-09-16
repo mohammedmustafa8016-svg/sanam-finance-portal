@@ -22,9 +22,13 @@ function extractFunction(name){
   throw new Error(`Unclosed function ${name}`);
 }
 
-const names=['universalColumnStorageKey','universalTableKey','universalColumnDefs','universalVisibleSet','applyUniversalColumnVisibility','installUniversalColumnCustomizers'];
+const names=[
+  'universalColumnStorageKey','universalTableKey','universalColumnDefs','universalVisibleSet',
+  'applyUniversalColumnVisibility','openUniversalColumnSettings','saveUniversalColumns','resetUniversalColumns',
+  'installUniversalColumnCustomizers'
+];
 const funcs=names.map(extractFunction).join('\n');
-const html=src.replace(/<script[\s\S]*?<\/script>/gi,'').replace('</body>',`<script>\nlet profile={id:'qa-column-user'};\nconst UNIVERSAL_COLUMN_PREF_PREFIX='sanam_columns_v2';\nfunction displayText(v){return v}\n${funcs}\nwindow.addEventListener('DOMContentLoaded',()=>installUniversalColumnCustomizers());\n</script></body>`);
+const html=src.replace(/<script[\s\S]*?<\/script>/gi,'').replace('</body>',`<div id="qaModal"><div id="modalTitle"></div><div id="modalBody"></div></div><script>\nlet profile={id:'qa-column-user'};\nconst UNIVERSAL_COLUMN_PREF_PREFIX='sanam_columns_v2';\nfunction displayText(v){return v}\nfunction showModal(title,html){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=html}\nfunction closeModal(){document.getElementById('modalBody').innerHTML=''}\nfunction installTableFilters(){}\n${funcs}\nwindow.addEventListener('DOMContentLoaded',()=>installUniversalColumnCustomizers());\n</script></body>`);
 
 const server=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(html)});
 await new Promise(r=>server.listen(4173,'127.0.0.1',r));
@@ -43,18 +47,23 @@ for(const x of initial){ if(!x.button) throw new Error(`No customization button 
 const configured=await page.evaluate(()=>{
   const out=[];
   for(const t of document.querySelectorAll('.section .table-wrap table')){
-    const defs=universalColumnDefs(t);
-    const chosen=defs.length>1?[defs[0].key,defs[defs.length-1].key]:[defs[0].key];
-    localStorage.setItem(universalColumnStorageKey(t),JSON.stringify(chosen));
-    applyUniversalColumnVisibility(t);
+    const key=universalTableKey(t), defs=universalColumnDefs(t);
+    openUniversalColumnSettings(key);
+    const choices=[...document.querySelectorAll('.universal-column-choice')];
+    choices.forEach(c=>c.checked=false);
+    const wanted=defs.length>1?[defs[0].key,defs[defs.length-1].key]:[defs[0].key];
+    for(const c of choices){ if(wanted.includes(c.value)) c.checked=true; }
+    saveUniversalColumns(key);
+    const stored=JSON.parse(localStorage.getItem(universalColumnStorageKey(t))||'[]');
     const visibility=defs.map(d=>({key:d.key,hidden:[...t.querySelectorAll(`tr > *:nth-child(${d.index})`)].every(el=>el.classList.contains('hidden'))}));
-    out.push({key:universalTableKey(t),chosen,visibility,storageKey:universalColumnStorageKey(t)});
+    out.push({key,wanted,stored,visibility,storageKey:universalColumnStorageKey(t)});
   }
   return out;
 });
 for(const x of configured){
+  if(JSON.stringify(x.wanted)!==JSON.stringify(x.stored)) throw new Error(`Saved localStorage mismatch ${x.key}`);
   for(const v of x.visibility){
-    const shouldHide=!x.chosen.includes(v.key);
+    const shouldHide=!x.wanted.includes(v.key);
     if(v.hidden!==shouldHide) throw new Error(`Immediate visibility mismatch ${x.key}/${v.key}`);
   }
 }
@@ -63,8 +72,9 @@ await page.reload({waitUntil:'domcontentloaded'});
 const afterReload=await page.evaluate(()=>{
   const out=[];
   for(const t of document.querySelectorAll('.section .table-wrap table')){
-    const defs=universalColumnDefs(t); applyUniversalColumnVisibility(t);
+    const defs=universalColumnDefs(t);
     const chosen=JSON.parse(localStorage.getItem(universalColumnStorageKey(t))||'[]');
+    applyUniversalColumnVisibility(t);
     const visibility=defs.map(d=>({key:d.key,hidden:[...t.querySelectorAll(`tr > *:nth-child(${d.index})`)].every(el=>el.classList.contains('hidden'))}));
     out.push({key:universalTableKey(t),chosen,visibility,button:!!t.closest('.table-wrap')?.previousElementSibling?.querySelector('button')});
   }
@@ -81,5 +91,5 @@ for(const x of afterReload){
   }
 }
 
-console.log(JSON.stringify({tablesTested:initial.length,tables:initial.map(x=>({key:x.key,section:x.section,id:x.id,columnCount:x.cols.length})),persistence:'PASS',customizerButtons:'PASS'},null,2));
+console.log(JSON.stringify({tablesTested:initial.length,tables:initial.map(x=>({key:x.key,section:x.section,id:x.id,columnCount:x.cols.length})),actualSaveFlow:'PASS',persistenceAfterReload:'PASS',customizerButtons:'PASS'},null,2));
 await browser.close(); server.close();
