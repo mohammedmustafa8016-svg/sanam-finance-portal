@@ -17,6 +17,7 @@
 /* FILTER_RESERVE_PENDING_2026_09_16 */
 /* AUDIT_REFRESH_FIX_2026_09_16 */
 /* GOVERNED_UX_PLANNING_SLA_2026_09_16 */
+/* UI_FILTER_COLUMN_RESERVE_HOTFIX_2026_09_16 */
 </script>
 <style>
 :root{--nav:#0f2740;--nav2:#183a5b;--bg:#f3f5f8;--card:#fff;--text:#172033;--muted:#667085;--border:#d7dde5;--blue:#315c87;--green:#1f7a5a;--amber:#a66a16;--red:#a43f3f}
@@ -262,12 +263,21 @@ function applyPaymentColumnVisibility(){const t=document.getElementById('payment
 const PERMISSION_KEYS=[['page.dashboard','لوحة المعلومات'],['page.banks','السيولة والبنوك'],['page.payments','المدفوعات والاعتمادات'],['page.posted','المدفوعات المرحلة'],['page.pending','العمليات المعلقة'],['page.tasks','المهام'],['page.control','مركز التحكم اليومي'],['page.escalations','التعثر والتصعيد'],['page.automation','صحة الأتمتة'],['page.close','الإقفال الشهري'],['page.imprest','العهد'],['page.performance','أداء الفريق'],['page.ownership','مصفوفة المسؤوليات'],['page.exceptions','الاستثناءات والإجازات'],['page.audit','سجل العمليات'],['data.bank_balances','بيانات الأرصدة البنكية']];
 async function loadPermissionsAdmin(){if(profile.role!=='CFO')return;const {data,error}=await sb.from('user_permissions').select('user_id,permission_key,allowed');if(error)return alert(error.message);const m=new Map((data||[]).map(x=>[`${x.user_id}:${x.permission_key}`,!!x.allowed]));permissionsMatrix.innerHTML=`<table><thead><tr><th>${displayText('الموظف')}</th><th>${displayText('الدور')}</th>${PERMISSION_KEYS.map(x=>`<th>${displayText(x[1])}</th>`).join('')}</tr></thead><tbody>${profiles.map(u=>`<tr><td>${esc(u.full_name)}</td><td>${esc(displayText(ROLE_LABEL[u.role]||u.role))}</td>${PERMISSION_KEYS.map(([k])=>{const locked=['page.dashboard','page.banks','data.bank_balances'].includes(k)&&!['CFO','Supervisor','BankAccountant'].includes(u.role);const checked=locked?false:(m.get(`${u.id}:${k}`)??false);return `<td class="${locked?'permission-lock':''}"><input type="checkbox" ${checked?'checked':''} ${locked?'disabled':''} onchange="setPermissionAdmin('${u.id}','${k}',this.checked)"></td>`}).join('')}</tr>`).join('')}</tbody></table>`;installTableFilters();applyLanguage(permissionsMatrix)}
 async function setPermissionAdmin(userId,key,allowed){const {error}=await sb.rpc('set_user_permission',{p_user_id:userId,p_permission_key:key,p_allowed:allowed});if(error){alert(error.message);await loadPermissionsAdmin();return}if(userId===profile.id){await loadMyPermissions();applyAccess()}await loadPermissionsAdmin()}
-function renderAll(){renderBanks();renderPayments();renderAccountingQueue();renderSavedViews();renderTasks();renderControlCenter();renderWorkload();renderEscalations();renderAutomationHealth();renderClose();renderImprest();renderPerformance();renderOwnership();renderExceptions();renderPolicies();if(canBankBalances())renderDashboard();installUniversalColumnCustomizers();installTableFilters();applyLanguage()}
+function safeRender(name,fn){try{fn()}catch(e){console.error(`Sanam render failure [${name}]`,e)}}
+function renderAll(){
+ const steps=[['banks',renderBanks],['payments',renderPayments],['accountingQueue',renderAccountingQueue],['savedViews',renderSavedViews],['tasks',renderTasks],['controlCenter',renderControlCenter],['workload',renderWorkload],['escalations',renderEscalations],['automation',renderAutomationHealth],['close',renderClose],['imprest',renderImprest],['performance',renderPerformance],['ownership',renderOwnership],['exceptions',renderExceptions],['policies',renderPolicies]];
+ steps.forEach(([name,fn])=>safeRender(name,fn));
+ if(canBankBalances())safeRender('dashboard',renderDashboard);
+ try{installUniversalColumnCustomizers()}catch(e){console.error('Sanam column customization install failed',e)}
+ try{installTableFilters()}catch(e){console.error('Sanam table filter install failed',e)}
+ try{applyLanguage()}catch(e){console.error('Sanam language application failed',e)}
+}
 const ACCOUNT_TYPES=[{value:"Operational",label:"تشغيلي"},{value:"Working Capital Reserve",label:"احتياطي رأس المال العامل"},{value:"VAT Reserve",label:"احتياطي ضريبة القيمة المضافة"},{value:"Restricted / Other",label:"مقيد / آخر"}];
 function accountTypeLabel(v){const x=ACCOUNT_TYPES.find(a=>a.value===(v||"Operational"));return currentLang==='en'?(v||'Operational'):(x?.label||v||'تشغيلي')}
 function isProtectedBank(b){return !!b&&((b.account_type||'Operational')!=='Operational')}
 function metricLine(label,value,cls=''){return `<div class="row" style="padding:5px 0;border-bottom:1px solid #eef2f6"><span class="muted">${displayText(label)}</span><b class="${cls}">${value}</b></div>`}
 function renderDashboard(){
+ const canMove=canBankBalances()&&['CFO','Supervisor','BankAccountant'].includes(profile.role);
  const totalCash=banks.reduce((s,b)=>s+Number(b.balance||0),0),pendingReserved=banks.reduce((s,b)=>s+Number(b.reserved_balance||0),0);
  const operational=banks.filter(b=>(b.account_type||'Operational')==='Operational'),opCash=operational.reduce((s,b)=>s+Number(b.balance||0),0),opAvailable=operational.reduce((s,b)=>s+Number(b.available_balance||0),0);
  const wc=banks.filter(b=>b.account_type==='Working Capital Reserve').reduce((s,b)=>s+Number(b.balance||0),0),vat=banks.filter(b=>b.account_type==='VAT Reserve').reduce((s,b)=>s+Number(b.balance||0),0);
