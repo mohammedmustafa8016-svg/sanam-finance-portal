@@ -24,7 +24,7 @@ function extractFunction(name){
 
 const names=['universalColumnStorageKey','universalTableKey','universalColumnDefs','universalVisibleSet','applyUniversalColumnVisibility','installUniversalColumnCustomizers'];
 const funcs=names.map(extractFunction).join('\n');
-const html=src.replace(/<script[\s\S]*?<\/script>/gi,'').replace('</body>',`<script>\nlet profile={id:'qa-column-user'};\nfunction displayText(v){return v}\n${funcs}\nwindow.addEventListener('DOMContentLoaded',()=>installUniversalColumnCustomizers());\n</script></body>`);
+const html=src.replace(/<script[\s\S]*?<\/script>/gi,'').replace('</body>',`<script>\nlet profile={id:'qa-column-user'};\nconst UNIVERSAL_COLUMN_PREF_PREFIX='sanam_columns_v2';\nfunction displayText(v){return v}\n${funcs}\nwindow.addEventListener('DOMContentLoaded',()=>installUniversalColumnCustomizers());\n</script></body>`);
 
 const server=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(html)});
 await new Promise(r=>server.listen(4173,'127.0.0.1',r));
