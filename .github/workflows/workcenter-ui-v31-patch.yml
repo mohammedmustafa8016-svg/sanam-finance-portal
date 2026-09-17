@@ -1,0 +1,65 @@
+name: Work Center V3.1 UI Patch
+on:
+  push:
+    branches: [workcenter-ui-consolidation-v3-1-20260917]
+    paths:
+      - 'scripts/patch_workcenter_ui_v31.py'
+      - '.github/workflows/workcenter-ui-v31-patch.yml'
+permissions:
+  contents: write
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply patch
+        run: python scripts/patch_workcenter_ui_v31.py
+      - name: Static validation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          required=[
+            'WORKCENTER_UI_CONSOLIDATION_V31_2026_09_17',
+            'data-page="workcenter"',
+            'section id="workcenter"',
+            'get_workcenter_items',
+            'get_workcenter_summary',
+            'try_perform_work_item_action',
+            "setWorkCenterTab('waiting_on_me')",
+            "setWorkCenterTab('waiting_others')",
+            "setWorkCenterTab('exceptions')",
+            "setWorkCenterTab('completed_today')",
+            "openDailyPlan()",
+            "openTaskModal()"
+          ]
+          missing=[x for x in required if x not in s]
+          assert not missing, f'Missing markers: {missing}'
+          nav=s[s.index('<aside class="side">'):s.index('</aside>')]
+          for legacy in ['data-page="tasks"','data-page="workflow"','data-page="control"','data-page="workload"','data-page="escalations"']:
+              assert legacy not in nav, f'Legacy nav still visible: {legacy}'
+          assert 'data-page="close"' in nav
+          print('Static validation passed')
+          PY
+      - name: JavaScript syntax validation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          blocks=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S)
+          inline='\n'.join(b for b in blocks if 'supabase-js' not in b)
+          Path('/tmp/sanam-inline.js').write_text(inline,encoding='utf-8')
+          PY
+          node --check /tmp/sanam-inline.js
+      - name: Commit patched interface
+        run: |
+          git config user.name 'Sanam Finance Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'Consolidate Work Center V3.1 interface'
+            git push
+          fi
