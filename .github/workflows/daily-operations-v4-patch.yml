@@ -4,6 +4,7 @@ on:
     branches: [daily-operations-workflow-v4-20260917]
     paths:
       - 'scripts/patch_daily_operations_v4.py'
+      - 'scripts/fix_daily_operations_v4_patch.py'
       - '.github/workflows/daily-operations-v4-patch.yml'
 jobs:
   patch:
@@ -18,7 +19,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Apply V4 UI patch
-        run: python scripts/patch_daily_operations_v4.py
+        run: |
+          python scripts/patch_daily_operations_v4.py
+          python scripts/fix_daily_operations_v4_patch.py
       - name: Validate V4 anchors
         run: |
           grep -q 'DAILY_OPERATIONS_WORKFLOW_V4_2026_09_17' index.html
