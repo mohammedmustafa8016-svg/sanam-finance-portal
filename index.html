@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sanam Finance Portal</title>
+<script src="/theme-bootstrap.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">/* DELETE_BANK_PAYMENT_ACTIONS_2026_09_14 */
 /* FINANCE_OPS_CONTROL_2026_09_14 */
 /* DAILY_PLAN_ASSIGNMENT_2026_09_14 */
@@ -67,11 +68,12 @@ input,select,textarea{width:100%;padding:10px;border:1px solid var(--border);bor
 .team-ops-card{margin:12px 0}.team-ops-current{white-space:normal;min-width:220px}.time-positive{color:var(--green);font-weight:700}.time-negative{color:var(--red);font-weight:700}.wc-time-cell{min-width:105px}.quality-score{font-weight:800}.workday-status{font-size:12px;color:var(--muted);margin-top:5px}.performance-report-table td{white-space:normal}.performance-report-result{min-width:240px;white-space:normal}
 </style>
 <link rel="stylesheet" href="/workcenter-v5.css">
+<link rel="stylesheet" href="/portal-theme.css">
 </head>
 <body>
 <div id="authScreen" class="auth">
   <div class="auth-card">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="authLangBtn" class="btn" type="button" onclick="toggleLanguage()">English</button></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn" data-theme-toggle onclick="togglePortalTheme()" type="button">الوضع الفاتح</button><button id="authLangBtn" class="btn" type="button" onclick="toggleLanguage()">English</button></div>
     <h1>Sanam Finance Portal</h1>
     <div class="muted" style="margin-bottom:18px">نسخة سحابية تجريبية — الدخول متاح فقط لأعضاء فريق الإدارة المالية المعتمدين.</div>
     <label>البريد الإلكتروني للعمل</label>
@@ -91,9 +93,9 @@ input,select,textarea{width:100%;padding:10px;border:1px solid var(--border);bor
 <details class="nav-group" open><summary>المدفوعات</summary><button class="nav" data-page="payments">الاعتمادات</button><button class="nav" data-page="executed">الاعتمادات المنفذة</button><button class="nav" data-page="pending">الاعتمادات المعلقة</button><button class="nav" data-page="posted">الاعتمادات المرحلة</button></details>
 <details class="nav-group"><summary>الرقابة</summary><button class="nav" data-page="close">الإقفال</button><button class="nav" data-page="imprest">العهد</button><button class="nav" data-page="performance">الأداء</button><button class="nav" data-page="ownership">المسؤوليات</button><button class="nav" data-page="exceptions">الاستثناءات والسياسات</button></details>
 <details class="nav-group"><summary>الإدارة</summary><button class="nav" data-page="permissions">الصلاحيات</button><button class="nav" data-page="automation">الأتمتة</button><button class="nav" data-page="audit">السجل</button></details></aside>
-  <main class="main"><div class="top"><div><b id="pageTitle">لوحة المعلومات</b><div id="userRole" class="muted"></div></div><div class="lang-actions"><button id="langBtn" class="btn" type="button" onclick="toggleLanguage()">English</button><button id="logoutBtn" class="btn">تسجيل الخروج</button></div></div><div class="content">
+  <main class="main"><div class="top"><div><b id="pageTitle">لوحة المعلومات</b><div id="userRole" class="muted"></div></div><div class="lang-actions"><button id="headerNotificationsBtn" class="btn" onclick="openTaskNotifications()" type="button">التنبيهات</button><button class="btn" data-theme-toggle onclick="togglePortalTheme()" type="button">الوضع الفاتح</button><button id="langBtn" class="btn" type="button" onclick="toggleLanguage()">English</button><button id="logoutBtn" class="btn">تسجيل الخروج</button></div></div><div class="content">
 <section id="dashboard" class="section active">
-<div class="row"><div><h3 style="margin:0">CFO Financial & Operations Monitor</h3><div class="muted">مراقبة السيولة والتشغيل والمدفوعات والمهام والإقفال والاستثناءات من مكان واحد.</div></div><button class="btn" onclick="reloadAll()">تحديث</button></div>
+<div class="row"><div><h3 style="margin:0">لوحة القيادة المالية والتشغيلية</h3><div class="muted">مراقبة السيولة والتشغيل والمدفوعات والمهام والإقفال والاستثناءات من مكان واحد.</div></div><button class="btn" onclick="reloadAll()">تحديث</button></div>
 <div class="monitor-grid" style="margin-top:12px">
  <div class="card kpi"><span>إجمالي النقد بالبنوك</span><b id="kpiTotalBankCash">—</b></div>
  <div class="card kpi"><span>السيولة التشغيلية</span><b id="kpiOperationalLiquidity">—</b></div>
@@ -657,6 +659,8 @@ async function loadAudit(showFeedback=false){
 }
 </script>
 <script src="/workcenter-v5.js"></script>
+<script src="/portal-experience.js"></script>
 <script>init();</script>
 </body>
 </html>
+
