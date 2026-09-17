@@ -1,0 +1,4 @@
+const http=require('http'),fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'..');
+http.createServer((req,res)=>{let p=decodeURIComponent(new URL(req.url,'http://localhost').pathname);if(p==='/')p='/index.html';const f=path.resolve(root,'.'+p);if(!f.startsWith(root+path.sep)){res.writeHead(403);return res.end();}try{let content=fs.readFileSync(f);if(p==='/index.html')content=content.toString().replace('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','/tests/fixture-client.js');res.setHeader('Content-Type',p.endsWith('.html')?'text/html; charset=utf-8':p.endsWith('.css')?'text/css':p.endsWith('.js')?'text/javascript':'text/plain');res.end(content);}catch{res.writeHead(404);res.end();}}).listen(4173,'127.0.0.1',()=>console.log('Local isolated preview: http://127.0.0.1:4173'));
+
