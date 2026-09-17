@@ -1,0 +1,49 @@
+name: Workflow V3 UI Patch
+
+on:
+  push:
+    branches: [workflow-engine-v3-20260917]
+    paths:
+      - 'scripts/patch_workflow_v3_ui.py'
+      - '.github/workflows/workflow-v3-ui-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: workflow-engine-v3-20260917
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply Workflow V3 UI patch
+        run: python scripts/patch_workflow_v3_ui.py
+      - name: Validate JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          start=s.rfind('<script>')+len('<script>')
+          end=s.rfind('</script>')
+          Path('/tmp/app.js').write_text(s[start:end],encoding='utf-8')
+          assert 'WORKFLOW_ENGINE_V3_UI_2026_09_17' in s
+          assert 'data-page="workflow"' in s
+          assert '<section id="workflow"' in s
+          PY
+          node --check /tmp/app.js
+      - name: Commit patched UI
+        run: |
+          if git diff --quiet; then
+            echo 'No changes to commit'
+            exit 0
+          fi
+          git config user.name 'Sanam Finance Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Add Workflow V3 employee workspace UI'
+          git push origin workflow-engine-v3-20260917
