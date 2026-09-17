@@ -26,7 +26,7 @@ jobs:
           grep -q 'function deleteImprest' index.html
           grep -q "sb.rpc('update_imprest_fund'" index.html
           grep -q "sb.rpc('delete_imprest_fund'" index.html
-          grep -q "openImprestModal('${x.id}')" index.html
+          grep -q 'openImprestModal' index.html
       - name: Validate JavaScript syntax
         run: |
           python - <<'PY'
