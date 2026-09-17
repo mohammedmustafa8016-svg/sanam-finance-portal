@@ -1,0 +1,47 @@
+{
+  "generated_at_utc": "2026-09-17T05:47:48.131308+00:00",
+  "supabase_project_ref": "xpomwrpgxnjxabjnwnuz",
+  "production_baseline_commit": "8a6fa42f1dccf157f6ea8069907aa5131209654a",
+  "counts": {
+    "tasks": 150,
+    "payments": 37,
+    "audit_log": 424,
+    "bank_accounts": 13,
+    "imprest_funds": 3,
+    "finance_policies": 0,
+    "user_permissions": 108,
+    "monthly_close_tasks": 39,
+    "finance_activity_log": 7,
+    "finance_task_catalog": 26,
+    "bank_reserve_movements": 18
+  },
+  "settings": {
+    "daily_plan_go_live_date": "2026-09-17",
+    "auto_daily_generation_enabled": false
+  },
+  "cron": [
+    {
+      "jobid": 1,
+      "jobname": "sanam_generate_daily_tasks",
+      "active": false,
+      "schedule": "5 21 * * *",
+      "command": "select private.generate_daily_tasks();"
+    },
+    {
+      "jobid": 2,
+      "jobname": "sanam_generate_monthly_close_tasks",
+      "active": true,
+      "schedule": "10 21 28-31 * *",
+      "command": "select private.monthly_close_scheduler_tick();"
+    }
+  ],
+  "profiles": [
+    {"email":"amrelshafeiy@sanamint.sa","full_name":"عمرو الشافعي","role":"BankAccountant","active":true},
+    {"email":"ashraf@sanamint.sa","full_name":"أشرف بابكر","role":"APAccountant","active":true},
+    {"email":"fahadp@sanamint.sa","full_name":"فهد بشير","role":"GLAccountant","active":true},
+    {"email":"m.elgendy@sanamint.sa","full_name":"محمد الجندي","role":"ARAccountant","active":true},
+    {"email":"m.mustafa.acc@sanamint.sa","full_name":"Mohammed Mustafa","role":"CFO","active":true},
+    {"email":"mohi@sanamint.sa","full_name":"محي الدين علي حسن","role":"Supervisor","active":true}
+  ],
+  "note": "This manifest is a project-state reference, not a raw production database dump. Operational records remain in the live Supabase project."
+}
