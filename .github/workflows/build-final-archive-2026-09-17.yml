@@ -1,0 +1,35 @@
+name: Build Final Project Archive 2026-09-17
+on:
+  push:
+    branches: [archive-release-2026-09-17]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout complete repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build archive package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p archive/source
+          rsync -a --exclude='.git' --exclude='archive' ./ archive/source/
+          git bundle create archive/Sanam_Finance_Portal_full_history.bundle --all
+          git branch -a > archive/GIT_BRANCHES.txt
+          git log --all --date=iso --pretty=format:'%h | %ad | %an | %s' > archive/GIT_HISTORY.txt
+          printf '%s\n' 'Sanam Finance Portal Final Archive' > archive/ARCHIVE_INFO.txt
+          printf '%s\n' 'Archive date: 2026-09-17' >> archive/ARCHIVE_INFO.txt
+          printf '%s\n' 'Production baseline commit: 8a6fa42f1dccf157f6ea8069907aa5131209654a' >> archive/ARCHIVE_INFO.txt
+          printf '%s\n' 'Archive branch: archive-release-2026-09-17' >> archive/ARCHIVE_INFO.txt
+          printf '%s\n' 'Includes: source snapshot, Supabase migrations, Vercel config, handoff documentation, database manifest, branch list, full git history bundle.' >> archive/ARCHIVE_INFO.txt
+      - name: Upload final archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sanam-Finance-Portal-Final-Archive-2026-09-17
+          path: archive/
+          retention-days: 90
