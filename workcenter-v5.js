@@ -53,7 +53,7 @@ async function loadWorkCenter(quiet=false){
  wcEl('wcSyncStatus').textContent=wcText('جارٍ التحديث…','Updating…');wcEl('wcError').classList.add('hidden');
  if(!quiet)wcEl('wcResults').classList.add('wc-loading');
  try{const requestCall=wcReadonly()?sb.rpc('get_readonly_workcenter_dashboard_v1',{p_filters:workCenterFilters()}):sb.rpc('get_workcenter_dashboard_v5',{p_scope:workcenterScope,p_filters:workCenterFilters()});const {data,error}=await requestCall;if(request!==wcV5.request)return;if(error)throw error;if(!data?.cycle)throw new Error(wcText('لم تبدأ دورة التشغيل الجديدة بعد.','The new operating cycle has not started yet.'));
- wcV5.data=data;workcenterItems=data.items||[];workcenterSummary=data.summary||{};teamOperationsMonitor=data.team||[];
+ wcV5.data=data;workcenterItems=data.items||[];workcenterSummary=data.summary||{};teamOperationsMonitor=data.team||[];if(wcReadonly()){profiles=(data.team||[]).map(x=>({id:x.user_id,full_name:x.full_name,role:x.role,finance_team:true,active:true}));populateWorkCenterEmployeeFilter()}
  wcEl('wcCycleLabel').textContent=`${wcText('بداية الدورة','Cycle started')} · ${fmt(data.cycle.started_at)}`;
  wcEl('wcSyncStatus').textContent=`${wcText('آخر تحديث','Updated')} ${fmt(data.as_of)}`;renderWorkCenter();
  }catch(error){if(request!==wcV5.request)return;wcEl('wcError').textContent=wcText('تعذر تحميل مركز العمل. اضغط تحديث للمحاولة مجددًا. التفاصيل: ','Work Center could not be loaded. Refresh to retry. Details: ')+(error.message||String(error));wcEl('wcError').classList.remove('hidden');wcEl('wcSyncStatus').textContent=wcText('التحديث غير مكتمل','Update failed');if(!wcV5.data){workcenterItems=[];renderWorkCenter()} }
