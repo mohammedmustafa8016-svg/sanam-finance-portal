@@ -526,7 +526,7 @@ begin
             ) end
         ) order by e.created_at desc)
         from public.exceptions e
-        left join public.leave_delegations ld on ld.exception_id=e.id
+        left join public.leave_delegations ld on ld.id=e.leave_delegation_id
         left join public.profiles pa on pa.id=ld.absent_user_id
         left join public.profiles ps on ps.id=ld.substitute_user_id
       ),'[]'::jsonb),
