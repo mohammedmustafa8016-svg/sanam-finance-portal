@@ -485,6 +485,9 @@ begin
   if not found then raise exception 'Payment not found'; end if;
 
   if p_status='معلقة' then raise exception 'USE_GOVERNED_PAYMENT_PENDING_WORKFLOW'; end if;
+  if v.status='معلقة' and p_status not in ('مرفوض','موقوف') then
+    raise exception 'RESOLVE_PENDING_THROUGH_GOVERNED_WORKFLOW';
+  end if;
   if p_status='مرحّل' and (
       v.status<>'تم التسجيل'
       or v.accounting_registered_at is null
@@ -550,6 +553,15 @@ on conflict(rule_id) do update set
 update public.workcenter_action_rules
 set active=true,updated_at=now()
 where rule_id in ('SUP_PAYMENT_POST','CFO_PAYMENT_POST');
+
+revoke all on function public.register_payment_accounting(uuid) from public,anon;
+grant execute on function public.register_payment_accounting(uuid) to authenticated;
+revoke all on function public.supervisor_finalize_registered_payment(uuid,text,text,text,uuid,date) from public,anon;
+grant execute on function public.supervisor_finalize_registered_payment(uuid,text,text,text,uuid,date) to authenticated;
+revoke all on function public.post_payment(uuid) from public,anon;
+grant execute on function public.post_payment(uuid) to authenticated;
+revoke all on function public.cfo_override_payment_status(uuid,text,text) from public,anon;
+grant execute on function public.cfo_override_payment_status(uuid,text,text) to authenticated;
 
 -- Reassign only currently active, unposted payment workflow items.
 -- Historical posted transactions remain untouched.
