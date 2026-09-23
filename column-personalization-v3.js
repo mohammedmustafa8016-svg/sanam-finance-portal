@@ -185,6 +185,7 @@ function bcRememberFreezeBase(cell){
   if(cell.dataset.bcBasePosition===undefined)cell.dataset.bcBasePosition=cell.style.position||"";
   if(cell.dataset.bcBaseInsetInlineStart===undefined)cell.dataset.bcBaseInsetInlineStart=cell.style.insetInlineStart||"";
   if(cell.dataset.bcBaseZIndex===undefined)cell.dataset.bcBaseZIndex=cell.style.zIndex||"";
+  if(cell.dataset.bcBaseBackgroundColor===undefined)cell.dataset.bcBaseBackgroundColor=cell.style.backgroundColor||"";
 }
 function bcClearFreeze(table){
   table.querySelectorAll(".bc-frozen-column").forEach(cell=>{
@@ -192,6 +193,7 @@ function bcClearFreeze(table){
     if(cell.dataset.bcBasePosition)cell.style.position=cell.dataset.bcBasePosition;else cell.style.removeProperty("position");
     if(cell.dataset.bcBaseInsetInlineStart)cell.style.insetInlineStart=cell.dataset.bcBaseInsetInlineStart;else cell.style.removeProperty("inset-inline-start");
     if(cell.dataset.bcBaseZIndex)cell.style.zIndex=cell.dataset.bcBaseZIndex;else cell.style.removeProperty("z-index");
+    if(cell.dataset.bcBaseBackgroundColor)cell.style.backgroundColor=cell.dataset.bcBaseBackgroundColor;else cell.style.removeProperty("background-color");
   });
 }
 
@@ -216,6 +218,11 @@ function bcApplyFreeze(table,config){
       cell.style.position="sticky";
       cell.style.insetInlineStart=Math.round(offset)+"px";
       cell.style.zIndex=row.parentElement?.tagName==="THEAD"?"8":"4";
+      const cellBg=getComputedStyle(cell).backgroundColor;
+      const rowBg=getComputedStyle(row).backgroundColor;
+      cell.style.backgroundColor=(cellBg&&cellBg!=="rgba(0, 0, 0, 0)")
+        ? cellBg
+        : ((rowBg&&rowBg!=="rgba(0, 0, 0, 0)")?rowBg:"#fff");
     });
     offset+=width;
   });
