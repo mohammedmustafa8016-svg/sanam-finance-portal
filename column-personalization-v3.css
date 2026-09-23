@@ -1,15 +1,52 @@
 /* Business Central-style column personalization */
+
+/* Visible table grid lines: purely presentational, no layout/workflow changes. */
+.table-wrap table{
+  border-collapse:collapse;
+}
+.table-wrap table th,
+.table-wrap table td{
+  border-bottom:1px solid var(--border);
+  border-inline-end:1px solid var(--border);
+}
+.table-wrap table tr > :last-child{
+  border-inline-end:0;
+}
+.table-wrap table thead th{
+  border-bottom:1px solid var(--border);
+}
+
+/* Clear visual resize target on every column header. */
 .column-resize-handle{
   position:absolute;
   inset-block:0;
-  inset-inline-end:-4px;
-  width:8px;
+  inset-inline-end:-5px;
+  width:10px;
   cursor:col-resize;
   user-select:none;
   touch-action:none;
   z-index:12;
 }
-.column-resize-handle:hover{background:rgba(49,92,135,.14)}
+.column-resize-handle::after{
+  content:"";
+  position:absolute;
+  inset-block:7px;
+  inset-inline-start:50%;
+  width:1px;
+  transform:translateX(-50%);
+  background:var(--border);
+  opacity:.95;
+  transition:background-color .12s ease,width .12s ease,opacity .12s ease;
+}
+.column-resize-handle:hover::after,
+.column-resize-handle:active::after{
+  width:2px;
+  background:var(--blue);
+  opacity:1;
+}
+.column-resize-handle:hover{
+  background:color-mix(in srgb,var(--blue) 8%,transparent);
+}
 .bc-column-list{display:grid;gap:6px}
 .bc-column-item{
   display:grid;
