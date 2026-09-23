@@ -1,5 +1,5 @@
 Object.assign(I18N_AR_EN,{
-  "تسجيل نشاط إضافي":"Log Extra Activity",
+  "تسجيل مهمة إضافية":"Log Extra Task",
   "الأنشطة الإضافية غير المخططة":"Unplanned Extra Activities",
   "سجل مستقل للأعمال التي تم تنفيذها خارج المهام المسندة. لا تُحتسب كمهام مكتملة، وتحتاج اعتمادًا مبسطًا من المشرف.":"Independent log for work completed outside assigned tasks. It is not counted as completed assigned tasks and requires simple supervisor approval.",
   "اعتماد الكل لليوم":"Approve All Today",
@@ -134,7 +134,7 @@ function openAdhocActivityModal(){
     '<input id="adhoc_duration" type="number" min="5" max="720" step="5" value="30">'+
     '<div class="row" style="margin-top:14px"><button class="btn primary" onclick="saveAdhocActivity()">'+displayText("حفظ النشاط")+'</button></div>';
 
-  showModal(displayText("تسجيل نشاط إضافي"),html);
+  showModal(displayText("تسجيل مهمة إضافية"),html);
 }
 
 function setAdhocDuration(n){
