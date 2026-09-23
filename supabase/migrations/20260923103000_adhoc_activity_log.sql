@@ -91,9 +91,6 @@ begin
     raise exception 'ACTIVITY_TIME_CANNOT_BE_IN_FUTURE';
   end if;
 
-  if (v_today + v_time + make_interval(mins=>p_duration_minutes)) > v_now_local + interval '10 minutes' then
-    raise exception 'ACTIVITY_END_TIME_CANNOT_BE_IN_FUTURE';
-  end if;
 
   insert into public.adhoc_activities(
     employee_id,title,activity_date,activity_time,duration_minutes,category,status
