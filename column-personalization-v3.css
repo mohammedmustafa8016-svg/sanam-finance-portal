@@ -1,0 +1,43 @@
+/* Business Central-style column personalization */
+.column-resize-handle{
+  position:absolute;
+  inset-block:0;
+  inset-inline-end:-4px;
+  width:8px;
+  cursor:col-resize;
+  user-select:none;
+  touch-action:none;
+  z-index:12;
+}
+.column-resize-handle:hover{background:rgba(49,92,135,.14)}
+.bc-column-list{display:grid;gap:6px}
+.bc-column-item{
+  display:grid;
+  grid-template-columns:auto minmax(180px,1fr) auto auto auto auto auto;
+  gap:7px;
+  align-items:center;
+  padding:7px 8px;
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:#fff;
+}
+.bc-column-item.dragging{opacity:.55}
+.bc-drag-handle{cursor:grab;font-weight:800;color:var(--muted);padding:0 3px}
+.bc-column-check{display:flex;align-items:center;gap:7px;margin:0;min-width:0}
+.bc-column-check input{width:auto}
+.bc-column-check span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bc-mini-btn{padding:4px 7px;font-size:11px}
+.bc-role-default-box{
+  margin-top:14px;
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#fafbfc;
+}
+.bc-role-default-box h4{margin:0 0 8px}
+.bc-frozen-column{background-clip:padding-box}
+.bc-frozen-last{box-shadow:0 0 0 1px rgba(49,92,135,.08),-5px 0 8px -7px rgba(15,39,64,.65)}
+@media(max-width:760px){
+  .bc-column-item{grid-template-columns:auto minmax(130px,1fr) auto auto}
+  .bc-column-item .bc-mini-btn:nth-of-type(n+3){display:none}
+}
