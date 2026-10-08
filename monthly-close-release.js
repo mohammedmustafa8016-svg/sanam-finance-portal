@@ -82,19 +82,6 @@ async function releaseReadyMonthlyCloseTasks(){
   alert(currentLang==="en"?String(result.data||0)+" tasks released.":"تم فتح "+String(result.data||0)+" مهمة في مركز العمل.");
 }
 
-async function openTaskNotifications(){
-  const rows=(taskNotifications||[]).map(function(n){
-    const closeAction=n.notification_type==="MONTHLY_CLOSE_RELEASE_DUE" ?
-      '<button class="btn primary" onclick="markNotificationAndOpenClose(\''+esc(n.id)+'\')">'+(currentLang==="en"?"Review monthly close":"مراجعة مهام الإقفال")+'</button>' : "";
-    const taskAction=n.task_id ?
-      '<button class="btn" onclick="markNotificationAndOpen(\''+esc(n.id)+'\',\''+esc(n.task_id)+'\')">'+displayText("تفاصيل / تفاعل")+'</button>' : "";
-    const readAction=!n.read_at ?
-      '<button class="btn" onclick="markTaskNotificationRead(\''+esc(n.id)+'\')">'+(currentLang==="en"?"Mark read":"تحديد كمقروء")+'</button>' : "";
-    return '<div class="task-thread-item" style="'+(n.read_at?"opacity:.7":"")+'"><div class="task-thread-meta">'+fmt(n.created_at)+" — "+esc(displayText(n.notification_type))+'</div><div><b>'+esc(n.title)+'</b></div><div>'+esc(n.message||n.body||"")+'</div><div class="task-actions-wrap" style="margin-top:6px">'+closeAction+taskAction+readAction+"</div></div>";
-  }).join("")||'<div class="muted">'+displayText("لا توجد تنبيهات مهام جديدة.")+"</div>";
-  showModal(displayText("التنبيهات"),'<div class="task-thread">'+rows+"</div>");
-}
-
 async function markNotificationAndOpenClose(id){
   await sb.rpc("mark_task_notification_read",{p_notification_id:id});
   closeModal();
