@@ -98,7 +98,7 @@ $function$;
 
 -- Correct only already-existing inconsistent rows produced by the old override behavior,
 -- then resynchronize exactly those corrected rows to the existing V3 workflow.
-do $
+do $do$
 declare
   r record;
 begin
@@ -128,4 +128,4 @@ begin
     perform private.ensure_payment_workflow_v3(r.id);
   end loop;
 end
-$;
+$do$;
