@@ -96,52 +96,36 @@ begin
 end
 $function$;
 
--- Correct only already-existing inconsistent rows produced by the old override behavior.
-update public.payments
-set supervisor_status='معلق',
-    supervisor_approved_by=null,
-    supervisor_approved_at=null,
-    cfo_status='معلق',
-    cfo_approved_by=null,
-    cfo_approved_at=null,
-    updated_at=now()
-where status='بانتظار مراجعة المشرف'
-  and executed_at is null
-  and accounting_registered_at is null
-  and posted_at is null
-  and (
-    supervisor_status='موافق'
-    or supervisor_approved_by is not null
-    or supervisor_approved_at is not null
-    or cfo_status='موافق'
-    or cfo_approved_by is not null
-    or cfo_approved_at is not null
-  );
-
--- Resynchronize only the corrected rows back to the already-existing V3 workflow.
-do $$
+-- Correct only already-existing inconsistent rows produced by the old override behavior,
+-- then resynchronize exactly those corrected rows to the existing V3 workflow.
+do $
 declare
   r record;
 begin
   for r in
-    select id
-    from public.payments
+    update public.payments
+    set supervisor_status='معلق',
+        supervisor_approved_by=null,
+        supervisor_approved_at=null,
+        cfo_status='معلق',
+        cfo_approved_by=null,
+        cfo_approved_at=null,
+        updated_at=now()
     where status='بانتظار مراجعة المشرف'
       and executed_at is null
       and accounting_registered_at is null
       and posted_at is null
-      and supervisor_status='معلق'
-      and supervisor_approved_by is null
-      and supervisor_approved_at is null
-      and cfo_status='معلق'
-      and cfo_approved_by is null
-      and cfo_approved_at is null
-      and id in (
-        'd575155c-9c41-43a7-9326-281470c592b1'::uuid,
-        'e3c45a48-99b7-477b-8fcb-57487026de74'::uuid
+      and (
+        supervisor_status='موافق'
+        or supervisor_approved_by is not null
+        or supervisor_approved_at is not null
+        or cfo_status='موافق'
+        or cfo_approved_by is not null
+        or cfo_approved_at is not null
       )
+    returning id
   loop
     perform private.ensure_payment_workflow_v3(r.id);
   end loop;
 end
-$$;
+$;
