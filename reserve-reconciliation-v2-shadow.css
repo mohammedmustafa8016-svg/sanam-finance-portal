@@ -1,0 +1,26 @@
+.reserve-v2-shell{display:grid;gap:14px}
+.reserve-v2-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.reserve-v2-title{margin:0}
+.reserve-v2-badges{display:flex;gap:7px;flex-wrap:wrap}
+.reserve-v2-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.reserve-v2-kpi{background:#fff;border:1px solid var(--border);border-radius:9px;padding:12px}
+.reserve-v2-kpi span{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+.reserve-v2-kpi b{font-size:18px;display:block}
+.reserve-v2-tabs{display:flex;gap:7px;flex-wrap:wrap}
+.reserve-v2-tabs .btn.active{background:var(--nav);color:#fff;border-color:var(--nav)}
+.reserve-v2-filterbar{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.reserve-v2-filterbar>div{min-width:190px}
+.reserve-v2-account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.reserve-v2-account-card{border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff}
+.reserve-v2-account-card h4{margin:0 0 4px}
+.reserve-v2-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.reserve-v2-metric{border:1px solid #e7ebf0;border-radius:8px;padding:9px;background:#fafbfc}
+.reserve-v2-metric span{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+.reserve-v2-metric b{font-size:14px}
+.reserve-v2-zero{color:var(--green);font-weight:700}
+.reserve-v2-nonzero{color:var(--amber);font-weight:700}
+.reserve-v2-error{border:1px solid #edb7b7;background:#fff3f3;color:#8f2d2d;border-radius:8px;padding:10px}
+.reserve-v2-loading{opacity:.65;pointer-events:none}
+.reserve-v2-table-note{margin:8px 0 0;font-size:11px;color:var(--muted)}
+@media(max-width:1200px){.reserve-v2-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.reserve-v2-kpis,.reserve-v2-account-grid,.reserve-v2-metrics{grid-template-columns:1fr}.reserve-v2-filterbar>div{min-width:100%;width:100%}}
