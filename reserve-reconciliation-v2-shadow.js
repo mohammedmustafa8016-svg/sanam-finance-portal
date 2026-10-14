@@ -13,7 +13,8 @@
     draws:[],
     exceptions:[],
     monitorLatest:[],
-    monitorHistory:[]
+    monitorHistory:[],
+    monitorError:null
   };
 
   const allowed = () => ["CFO","Supervisor"].includes(typeof profile!=="undefined" ? profile?.role : undefined);
@@ -208,7 +209,8 @@
       <th>${tx("آخر فحص","Last Check")}</th><th>${tx("الحساب","Account")}</th><th>${tx("الحالة","Status")}</th><th>Δ Target</th><th>Δ Balance</th><th>Δ Reserved</th><th>Δ Recovery</th><th>Δ Gap</th><th>${tx("فرق المصالحة","Unreconciled")}</th><th>${tx("رمز الاستثناء","Exception Code")}</th>
       </tr></thead><tbody>${latest.map(x=>`<tr><td>${date(x.observed_at)}</td><td>${accountLabel(x)}</td><td>${statusBadge(x.observation_status)}</td><td>${m(x.target_delta)}</td><td>${m(x.bank_balance_delta)}</td><td>${m(x.reserved_payments_delta)}</td><td>${m(x.outstanding_recovery_delta)}</td><td>${m(x.target_gap_delta)}</td><td>${m(x.v2_unreconciled_difference)}</td><td>${e(x.exception_code||"—")}</td></tr>`).join("")||`<tr><td colspan="10">—</td></tr>`}</tbody></table></div></div>`;
     const historyTable=`<div class="card"><h4 style="margin-top:0">${tx("سجل المراقبة الأخير","Recent observation history")}</h4><div class="table-wrap"><table id="reserveV2MonitorHistoryTable"><thead><tr><th>${tx("وقت الفحص","Observed At")}</th><th>${tx("الحساب","Account")}</th><th>${tx("الحالة","Status")}</th><th>Δ Target</th><th>Δ Balance</th><th>Δ Recovery</th><th>Δ Gap</th><th>${tx("التفاصيل","Details")}</th></tr></thead><tbody>${history.map(x=>`<tr><td>${date(x.observed_at)}</td><td>${accountLabel(x)}</td><td>${statusBadge(x.observation_status)}</td><td>${m(x.target_delta)}</td><td>${m(x.bank_balance_delta)}</td><td>${m(x.outstanding_recovery_delta)}</td><td>${m(x.target_gap_delta)}</td><td>${e(x.exception_detail||tx("لا توجد فروقات تشغيلية.","No operational variance."))}</td></tr>`).join("")||`<tr><td colspan="8">—</td></tr>`}</tbody></table></div></div>`;
-    return `<div class="reserve-v2-monitoring-grid">${latestTable}${historyTable}</div>`;
+    const monitorError=state.monitorError?`<div class="reserve-v2-error">${e(state.monitorError)}</div>`:"";
+    return `<div class="reserve-v2-monitoring-grid">${monitorError}${latestTable}${historyTable}</div>`;
   }
 
   function renderExceptions(){
@@ -249,15 +251,18 @@
         sb.rpc("get_reserve_shadow_monitor_status_v2"),
         sb.rpc("get_reserve_shadow_observation_history_v2",{p_bank_account_id:bank,p_limit:100})
       ]);
-      const failed=[summary,comparison,movements,draws,exceptions,monitorLatest,monitorHistory].find(x=>x.error);
+      const failed=[summary,comparison,movements,draws,exceptions].find(x=>x.error);
       if(failed)throw failed.error;
       state.summary=summary.data||[];
       state.comparison=comparison.data||[];
       state.movements=movements.data||[];
       state.draws=draws.data||[];
       state.exceptions=exceptions.data||[];
-      state.monitorLatest=monitorLatest.data||[];
-      state.monitorHistory=monitorHistory.data||[];
+      state.monitorError=monitorLatest.error||monitorHistory.error
+        ? tx("تعذر تحديث طبقة المراقبة التلقائية، بينما تظل بيانات V2 الأساسية متاحة.","Automatic monitoring could not refresh; core V2 data remains available.")
+        : null;
+      state.monitorLatest=monitorLatest.error?[]:(monitorLatest.data||[]);
+      state.monitorHistory=monitorHistory.error?[]:(monitorHistory.data||[]);
       state.loaded=true;
 
       const select=document.getElementById("reserveV2AccountFilter");
