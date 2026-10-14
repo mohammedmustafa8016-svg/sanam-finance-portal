@@ -26,7 +26,7 @@
 
   function statusBadge(v){
     const s=String(v||"—");
-    const good=["RECONCILED","RECONCILED_WITH_TOLERANCE","MATCH","BASELINE_MATCH_WITH_HISTORICAL_VARIANCE","Approved","Active"];
+    const good=["RECONCILED","RECONCILED_WITH_TOLERANCE","MATCH","BASELINE_MATCH_WITH_HISTORICAL_VARIANCE","Approved","Active","OK","ACTIVE / NO CURRENT VARIANCE"];
     const bad=["CONTROL_EXCEPTION","REVIEW_REQUIRED"];
     const cls=good.includes(s)?"green":bad.includes(s)?"red":"amber";
     return `<span class="badge ${cls}">${e(s)}</span>`;
