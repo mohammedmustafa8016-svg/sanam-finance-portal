@@ -11,7 +11,9 @@
     comparison:[],
     movements:[],
     draws:[],
-    exceptions:[]
+    exceptions:[],
+    monitorLatest:[],
+    monitorHistory:[]
   };
 
   const allowed = () => ["CFO","Supervisor"].includes(typeof profile!=="undefined" ? profile?.role : undefined);
@@ -24,8 +26,8 @@
 
   function statusBadge(v){
     const s=String(v||"—");
-    const good=["RECONCILED","RECONCILED_WITH_TOLERANCE","MATCH","BASELINE_MATCH_WITH_HISTORICAL_VARIANCE","Approved","Active"];
-    const bad=["CONTROL_EXCEPTION","REVIEW_REQUIRED"];
+    const good=["RECONCILED","RECONCILED_WITH_TOLERANCE","MATCH","BASELINE_MATCH_WITH_HISTORICAL_VARIANCE","Approved","Active","OK","ACTIVE / NO CURRENT VARIANCE"];
+    const bad=["CONTROL_EXCEPTION","REVIEW_REQUIRED","ACTIVE / REVIEW REQUIRED"];
     const cls=good.includes(s)?"green":bad.includes(s)?"red":"amber";
     return `<span class="badge ${cls}">${e(s)}</span>`;
   }
@@ -45,6 +47,7 @@
           <div class="reserve-v2-badges">
             <span class="badge green">READ ONLY</span>
             <span class="badge amber">SHADOW MODE</span>
+            <span class="badge green">AUTO MONITORING · 15 MIN</span>
             <button class="btn" type="button" onclick="loadReserveReconciliationV2Shadow(true)">${tx("تحديث","Refresh")}</button>
           </div>
         </div>
@@ -55,6 +58,7 @@
         </div>
 
         <div id="reserveV2Error" class="reserve-v2-error hidden"></div>
+        <div id="reserveV2MonitorStrip" class="reserve-v2-monitor-strip"></div>
         <div id="reserveV2Kpis" class="reserve-v2-kpis"></div>
 
         <div class="card">
@@ -81,6 +85,7 @@
           <button class="btn" data-reserve-v2-tab="movements" onclick="setReserveV2Tab('movements')">${tx("الحركات","Movements")}</button>
           <button class="btn" data-reserve-v2-tab="draws" onclick="setReserveV2Tab('draws')">${tx("المبالغ المطلوب استعادتها","Open Recovery")}</button>
           <button class="btn" data-reserve-v2-tab="exceptions" onclick="setReserveV2Tab('exceptions')">${tx("الاستثناءات","Exceptions")}</button>
+          <button class="btn" data-reserve-v2-tab="monitoring" onclick="setReserveV2Tab('monitoring')">${tx("المراقبة التلقائية","Automatic Monitoring")}</button>
         </div>
 
         <div id="reserveV2Panel"></div>
@@ -111,6 +116,26 @@
       [tx("الاستثناءات المفتوحة","Open exceptions"),totals.exceptions]
     ];
     box.innerHTML=items.map(([k,v])=>`<div class="reserve-v2-kpi"><span>${k}</span><b>${v}</b></div>`).join("");
+  }
+
+  function filteredMonitorLatest(){
+    return state.bankAccountId ? state.monitorLatest.filter(x=>x.bank_account_id===state.bankAccountId) : state.monitorLatest;
+  }
+
+  function renderMonitorStrip(){
+    const box=document.getElementById("reserveV2MonitorStrip");if(!box)return;
+    const rows=filteredMonitorLatest();
+    const last=rows.reduce((mx,x)=>!mx||new Date(x.observed_at)>new Date(mx)?x.observed_at:mx,null);
+    const variances=rows.filter(x=>x.observation_status==="VARIANCE").length;
+    const controls=rows.filter(x=>x.observation_status==="CONTROL_EXCEPTION").length;
+    const ok=rows.length>0&&variances===0&&controls===0;
+    box.innerHTML=`
+      <div><span>${tx("حالة المراقبة","Monitoring status")}</span><b>${statusBadge(rows.length?(ok?"ACTIVE / NO CURRENT VARIANCE":"ACTIVE / REVIEW REQUIRED"):"WAITING FOR FIRST RUN")}</b></div>
+      <div><span>${tx("آخر فحص تلقائي","Last automatic check")}</span><b>${last?date(last):"—"}</b></div>
+      <div><span>${tx("الحسابات المراقبة","Accounts monitored")}</span><b>${rows.length}</b></div>
+      <div><span>${tx("فروقات حالية","Current variances")}</span><b class="${variances?'reserve-v2-nonzero':'reserve-v2-zero'}">${variances}</b></div>
+      <div><span>${tx("استثناءات رقابية","Control exceptions")}</span><b class="${controls?'reserve-v2-nonzero':'reserve-v2-zero'}">${controls}</b></div>
+      <div><span>${tx("دورية الفحص","Observation cadence")}</span><b>15 min</b></div>`;
   }
 
   function renderOverview(){
@@ -176,6 +201,16 @@
       </tr>`).join("")||`<tr><td colspan="7">—</td></tr>`}</tbody></table></div>`;
   }
 
+  function renderMonitoring(){
+    const latest=filteredMonitorLatest();
+    const history=state.bankAccountId?state.monitorHistory.filter(x=>x.bank_account_id===state.bankAccountId):state.monitorHistory;
+    const latestTable=`<div class="card"><div class="row"><div><h4 style="margin:0">${tx("الحالة الحالية للمراقبة","Current monitoring state")}</h4><div class="muted">${tx("الفروق التاريخية الافتتاحية محفوظة كمرجع ولا تُصنف وحدها كاستثناء نشط.","Opening historical variance is preserved as reference and does not by itself create an active exception.")}</div></div><span class="badge green">15 MIN</span></div><div class="table-wrap" style="margin-top:10px"><table id="reserveV2MonitorLatestTable"><thead><tr>
+      <th>${tx("آخر فحص","Last Check")}</th><th>${tx("الحساب","Account")}</th><th>${tx("الحالة","Status")}</th><th>Δ Target</th><th>Δ Balance</th><th>Δ Reserved</th><th>Δ Recovery</th><th>Δ Gap</th><th>${tx("فرق المصالحة","Unreconciled")}</th><th>${tx("رمز الاستثناء","Exception Code")}</th>
+      </tr></thead><tbody>${latest.map(x=>`<tr><td>${date(x.observed_at)}</td><td>${accountLabel(x)}</td><td>${statusBadge(x.observation_status)}</td><td>${m(x.target_delta)}</td><td>${m(x.bank_balance_delta)}</td><td>${m(x.reserved_payments_delta)}</td><td>${m(x.outstanding_recovery_delta)}</td><td>${m(x.target_gap_delta)}</td><td>${m(x.v2_unreconciled_difference)}</td><td>${e(x.exception_code||"—")}</td></tr>`).join("")||`<tr><td colspan="10">—</td></tr>`}</tbody></table></div></div>`;
+    const historyTable=`<div class="card"><h4 style="margin-top:0">${tx("سجل المراقبة الأخير","Recent observation history")}</h4><div class="table-wrap"><table id="reserveV2MonitorHistoryTable"><thead><tr><th>${tx("وقت الفحص","Observed At")}</th><th>${tx("الحساب","Account")}</th><th>${tx("الحالة","Status")}</th><th>Δ Target</th><th>Δ Balance</th><th>Δ Recovery</th><th>Δ Gap</th><th>${tx("التفاصيل","Details")}</th></tr></thead><tbody>${history.map(x=>`<tr><td>${date(x.observed_at)}</td><td>${accountLabel(x)}</td><td>${statusBadge(x.observation_status)}</td><td>${m(x.target_delta)}</td><td>${m(x.bank_balance_delta)}</td><td>${m(x.outstanding_recovery_delta)}</td><td>${m(x.target_gap_delta)}</td><td>${e(x.exception_detail||tx("لا توجد فروقات تشغيلية.","No operational variance."))}</td></tr>`).join("")||`<tr><td colspan="8">—</td></tr>`}</tbody></table></div></div>`;
+    return `<div class="reserve-v2-monitoring-grid">${latestTable}${historyTable}</div>`;
+  }
+
   function renderExceptions(){
     return `<div class="table-wrap"><table id="reserveV2ExceptionsTable"><thead><tr>
       <th>${tx("وقت الاكتشاف","Detected")}</th><th>${tx("الحساب","Account")}</th><th>${tx("نوع الاستثناء","Exception Type")}</th><th>${tx("المبلغ","Amount")}</th>
@@ -189,10 +224,11 @@
   function render(){
     shell();
     if(!allowed())return;
+    renderMonitorStrip();
     renderKpis();
     document.querySelectorAll("[data-reserve-v2-tab]").forEach(b=>b.classList.toggle("active",b.dataset.reserveV2Tab===state.tab));
     const panel=document.getElementById("reserveV2Panel"); if(!panel)return;
-    panel.innerHTML=state.tab==="comparison"?renderComparison():state.tab==="movements"?renderMovements():state.tab==="draws"?renderDraws():state.tab==="exceptions"?renderExceptions():renderOverview();
+    panel.innerHTML=state.tab==="comparison"?renderComparison():state.tab==="movements"?renderMovements():state.tab==="draws"?renderDraws():state.tab==="exceptions"?renderExceptions():state.tab==="monitoring"?renderMonitoring():renderOverview();
     try{window.installTableFilters?.();window.installUniversalColumnCustomizers?.();}catch(err){console.error("Reserve V2 table utilities failed",err)}
   }
 
@@ -204,20 +240,24 @@
     const errorBox=document.getElementById("reserveV2Error"); if(errorBox)errorBox.classList.add("hidden");
     try{
       const bank=state.bankAccountId||null, from=state.from||null, to=state.to||null;
-      const [summary,comparison,movements,draws,exceptions]=await Promise.all([
+      const [summary,comparison,movements,draws,exceptions,monitorLatest,monitorHistory]=await Promise.all([
         sb.rpc("get_reserve_reconciliation_summary_v2"),
         sb.rpc("compare_reserve_v1_v2",{p_bank_account_id:bank}),
         sb.rpc("get_reserve_movement_ledger_v2",{p_bank_account_id:bank,p_from:from,p_to:to}),
         sb.rpc("get_reserve_open_draws_v2",{p_bank_account_id:bank}),
-        sb.rpc("get_reserve_reconciliation_exceptions_v2",{p_bank_account_id:bank})
+        sb.rpc("get_reserve_reconciliation_exceptions_v2",{p_bank_account_id:bank}),
+        sb.rpc("get_reserve_shadow_monitor_status_v2"),
+        sb.rpc("get_reserve_shadow_observation_history_v2",{p_bank_account_id:bank,p_limit:100})
       ]);
-      const failed=[summary,comparison,movements,draws,exceptions].find(x=>x.error);
+      const failed=[summary,comparison,movements,draws,exceptions,monitorLatest,monitorHistory].find(x=>x.error);
       if(failed)throw failed.error;
       state.summary=summary.data||[];
       state.comparison=comparison.data||[];
       state.movements=movements.data||[];
       state.draws=draws.data||[];
       state.exceptions=exceptions.data||[];
+      state.monitorLatest=monitorLatest.data||[];
+      state.monitorHistory=monitorHistory.data||[];
       state.loaded=true;
 
       const select=document.getElementById("reserveV2AccountFilter");
@@ -249,6 +289,10 @@
     state.bankAccountId="";state.from="";state.to="";load(true);
   };
   window.renderReserveReconciliationV2Shadow=render;
+
+  setInterval(()=>{
+    if(allowed()&&section()?.classList.contains("active"))load(true);
+  },300000);
 
   const originalToggle=window.toggleLanguage;
   if(typeof originalToggle==="function"){
