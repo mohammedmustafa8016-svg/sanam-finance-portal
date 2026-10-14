@@ -24,3 +24,11 @@
 .reserve-v2-table-note{margin:8px 0 0;font-size:11px;color:var(--muted)}
 @media(max-width:1200px){.reserve-v2-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.reserve-v2-kpis,.reserve-v2-account-grid,.reserve-v2-metrics{grid-template-columns:1fr}.reserve-v2-filterbar>div{min-width:100%;width:100%}}
+.reserve-v2-monitor-strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.reserve-v2-monitor-strip>div{background:#fff;border:1px solid var(--border);border-radius:9px;padding:10px}
+.reserve-v2-monitor-strip span{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+.reserve-v2-monitor-strip b{font-size:13px;display:block}
+.reserve-v2-monitoring-grid{display:grid;gap:14px}
+@media(max-width:1200px){.reserve-v2-monitor-strip{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.reserve-v2-monitor-strip{grid-template-columns:1fr}}
+
