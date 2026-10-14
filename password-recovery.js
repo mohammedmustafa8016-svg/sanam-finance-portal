@@ -20,7 +20,9 @@
       "إرسال رابط إعادة تعيين":"Send Reset Link",
       "سيتم إرسال رابط آمن إلى بريد المستخدم. المدير المالي لا يرى كلمة المرور ولا يحددها نيابةً عن المستخدم.":"A secure link will be sent to the user. The CFO cannot view the password or set it on the user's behalf.",
       "هل تريد إرسال رابط إعادة تعيين كلمة المرور إلى هذا المستخدم؟":"Send a password-reset link to this user?",
-      "تم إرسال طلب إعادة تعيين كلمة المرور إلى بريد المستخدم.":"The password-reset request was sent to the user's email."
+      "تم إرسال طلب إعادة تعيين كلمة المرور إلى بريد المستخدم.":"The password-reset request was sent to the user's email.",
+      "سيتم تغيير كلمة المرور لهذا الحساب فقط. لا يتم عرض كلمة المرور للمدير المالي أو لأي مستخدم آخر.":"The password will be changed only for this account. It is never shown to the CFO or any other user.",
+      "إعادة تعيين كلمة المرور ترسل رابطًا آمنًا إلى بريد المستخدم. المدير المالي لا يرى كلمة المرور ولا يحددها نيابةً عنه.":"Password reset sends a secure link to the user. The CFO cannot see the password or set it on the user's behalf."
     });
   }
 
