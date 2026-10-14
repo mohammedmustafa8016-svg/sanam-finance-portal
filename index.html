@@ -69,7 +69,8 @@ input,select,textarea{width:100%;padding:10px;border:1px solid var(--border);bor
 </style>
 <link rel="stylesheet" href="/workcenter-v5.css">
 <link rel="stylesheet" href="/portal-theme.css">
-<link rel="stylesheet" href="/column-personalization-v3.css">\n<link rel="stylesheet" href="/reserve-reconciliation-v2-shadow.css">
+<link rel="stylesheet" href="/column-personalization-v3.css">
+<link rel="stylesheet" href="/reserve-reconciliation-v2-shadow.css">
 </head>
 <body>
 <div id="authScreen" class="auth">
@@ -112,7 +113,8 @@ input,select,textarea{width:100%;padding:10px;border:1px solid var(--border);bor
 <div class="card monitor-section" data-dashboard-element="dashboard.team"><h3 style="margin-top:0">مراقبة أداء الفريق</h3><div class="table-wrap monitor-table"><table><thead><tr><th>الموظف</th><th>يعمل الآن على</th><th>مهام اليوم</th><th>المكتمل</th><th>المتأخر</th><th>متعثر</th><th>بانتظار المراجعة</th><th>إنجاز الشهر</th><th>في الموعد</th></tr></thead><tbody id="dashboardTeamBody"></tbody></table></div></div>
 <div class="card monitor-section" data-dashboard-element="dashboard.automation"><h3 style="margin-top:0">صحة الأتمتة</h3><div id="dashboardAutomation"></div></div>
 </section>
-<section id="reservev2" class="section" aria-label="Reserve Reconciliation V2 Shadow"></section>\n<section id="banks" class="section"><div class="row" style="margin-bottom:12px"><h3>السيولة والبنوك</h3><div class="lang-actions"><button id="reserveReportBtn" class="btn" type="button" onclick="openReserveReports()">تقارير الحسابات الاحتياطية</button><button id="addBankBtn" class="btn primary" type="button" onclick="openBankModal()">+ إضافة حساب</button></div></div><div class="note" style="margin-bottom:12px">حدد نوع الحساب من إعداد الحساب. الحسابات الاحتياطية تظل ضمن إجمالي النقد ولكن تُستبعد من السيولة التشغيلية، واستخدامها في المدفوعات يولد تحذيرًا ومراقبة فقط.</div><div class="table-wrap"><table><thead><tr><th>الشركة</th><th>البنك</th><th>الحساب</th><th>نوع الحساب</th><th>آخر 4 أرقام</th><th>الرصيد المستهدف</th><th>الرصيد</th><th>المحجوز</th><th>المتاح</th><th>آخر تحديث</th><th>إجراء</th></tr></thead><tbody id="banksBody"></tbody></table></div></section>
+<section id="reservev2" class="section" aria-label="Reserve Reconciliation V2 Shadow"></section>
+<section id="banks" class="section"><div class="row" style="margin-bottom:12px"><h3>السيولة والبنوك</h3><div class="lang-actions"><button id="reserveReportBtn" class="btn" type="button" onclick="openReserveReports()">تقارير الحسابات الاحتياطية</button><button id="addBankBtn" class="btn primary" type="button" onclick="openBankModal()">+ إضافة حساب</button></div></div><div class="note" style="margin-bottom:12px">حدد نوع الحساب من إعداد الحساب. الحسابات الاحتياطية تظل ضمن إجمالي النقد ولكن تُستبعد من السيولة التشغيلية، واستخدامها في المدفوعات يولد تحذيرًا ومراقبة فقط.</div><div class="table-wrap"><table><thead><tr><th>الشركة</th><th>البنك</th><th>الحساب</th><th>نوع الحساب</th><th>آخر 4 أرقام</th><th>الرصيد المستهدف</th><th>الرصيد</th><th>المحجوز</th><th>المتاح</th><th>آخر تحديث</th><th>إجراء</th></tr></thead><tbody id="banksBody"></tbody></table></div></section>
 <section id="payments" class="section"><div class="row" style="margin-bottom:12px"><h3>المدفوعات والاعتمادات</h3><div class="lang-actions"><button id="paymentReportBtn" class="btn" type="button" onclick="openPaymentReport()">تقرير المدفوعات</button><button id="addPaymentBtn" class="btn primary" type="button" onclick="openPaymentModal()">+ إضافة دفعة</button></div></div><div class="table-wrap"><table id="paymentsTable"><thead><tr><th>الاستحقاق</th><th>الشركة</th><th>المستفيد</th><th>المبلغ</th><th>الحساب</th><th data-default-hidden="1">الغرض</th><th data-default-hidden="1">الأولوية</th><th data-default-hidden="1">المستندات</th><th>المشرف</th><th>CFO</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="paymentsBody"></tbody></table></div></section>
 <section id="executed" class="section">
 <div class="row" style="margin-bottom:12px"><div><h3 style="margin:0">الاعتمادات المنفذة</h3><div class="muted">متابعة الاعتمادات من لحظة التنفيذ البنكي وحتى التسجيل والترحيل. تبدأ مهلة التسجيل 48 ساعة من تاريخ التنفيذ.</div></div><button class="btn" onclick="reloadAll()">تحديث</button></div>
@@ -688,7 +690,8 @@ async function loadAudit(showFeedback=false){
 <script src="/portal-experience.js"></script>
 <script src="/adhoc-activities.js"></script>
 <script src="/column-personalization-v3.js"></script>
-<script src="/monthly-close-release.js"></script>\n<script src="/reserve-reconciliation-v2-shadow.js"></script>
+<script src="/monthly-close-release.js"></script>
+<script src="/reserve-reconciliation-v2-shadow.js"></script>
 <script>init();</script>
 </body>
 </html>
