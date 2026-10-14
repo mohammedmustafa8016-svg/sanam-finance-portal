@@ -13,9 +13,9 @@
     exceptions:[]
   };
 
-  const allowed = () => ["CFO","Supervisor"].includes(window.profile?.role);
+  const allowed = () => ["CFO","Supervisor"].includes(typeof profile!=="undefined" ? profile?.role : undefined);
   const section = () => document.getElementById("reservev2");
-  const tx = (ar,en) => window.currentLang === "en" ? en : ar;
+  const tx = (ar,en) => (typeof currentLang!=="undefined" && currentLang === "en") ? en : ar;
   const n = v => Number(v || 0);
   const m = v => typeof window.moneyHtml === "function" ? window.moneyHtml(v) : new Intl.NumberFormat("en-SA",{style:"currency",currency:"SAR"}).format(n(v));
   const e = v => typeof window.esc === "function" ? window.esc(v) : String(v ?? "");
