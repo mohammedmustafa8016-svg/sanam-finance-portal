@@ -1,4 +1,4 @@
-(() => {
+(() => {\n  if(typeof I18N_AR_EN!=="undefined") I18N_AR_EN["مطابقة الاحتياطي V2"]="Reserve Reconciliation V2";
   const state = {
     loaded:false,
     loading:false,
