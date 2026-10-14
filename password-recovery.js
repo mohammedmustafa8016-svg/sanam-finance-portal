@@ -31,6 +31,7 @@
   }
 
   window.isPasswordRecoveryUrl=function(){
+    if(typeof PASSWORD_RECOVERY_LINK_DETECTED!=="undefined" && PASSWORD_RECOVERY_LINK_DETECTED)return true;
     try{
       const hash=new URLSearchParams(String(window.location.hash||"").replace(/^#/,""));
       const query=new URLSearchParams(window.location.search||"");
