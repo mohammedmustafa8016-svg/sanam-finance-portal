@@ -1,1 +1,0 @@
--- Exclude Friday/Saturday from task deadline alerts and escalation timing.
