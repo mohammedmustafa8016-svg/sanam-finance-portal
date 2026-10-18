@@ -1,0 +1,1 @@
+-- Friday/Saturday task business calendar. Applied to production as migration task_weekend_calendar_friday_saturday.
