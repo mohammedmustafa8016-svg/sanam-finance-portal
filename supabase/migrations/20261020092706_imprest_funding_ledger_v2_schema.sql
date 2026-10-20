@@ -1,3 +1,4 @@
+
 begin;
 
 alter table public.imprest_funds
@@ -54,7 +55,15 @@ create table public.imprest_ledger_entries (
   id uuid primary key default gen_random_uuid(),
   imprest_fund_id uuid not null references public.imprest_funds(id) on update restrict on delete restrict,
   entry_type text not null check (
-    entry_type in ('OPENING_BALANCE','TOP_UP','TEMPORARY_FUNDING','SETTLEMENT','REFUND','MANUAL_ADJUSTMENT','REVERSAL')
+    entry_type in (
+      'OPENING_BALANCE',
+      'TOP_UP',
+      'TEMPORARY_FUNDING',
+      'SETTLEMENT',
+      'REFUND',
+      'MANUAL_ADJUSTMENT',
+      'REVERSAL'
+    )
   ),
   direction text not null check (direction in ('INCREASE','DECREASE')),
   amount numeric(18,2) not null check (amount > 0),
@@ -103,11 +112,16 @@ on public.imprest_ledger_entries
 as restrictive for all to public
 using (false) with check (false);
 
-revoke all on table public.imprest_funding_requests,public.imprest_refunds,public.imprest_ledger_entries
-from public,anon,authenticated;
+revoke all on table
+  public.imprest_funding_requests,
+  public.imprest_refunds,
+  public.imprest_ledger_entries
+from public, anon, authenticated;
 
 grant select,insert,update,delete on table
-  public.imprest_funding_requests,public.imprest_refunds,public.imprest_ledger_entries
+  public.imprest_funding_requests,
+  public.imprest_refunds,
+  public.imprest_ledger_entries
 to service_role;
 
 commit;
