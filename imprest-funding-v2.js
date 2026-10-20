@@ -60,6 +60,7 @@
   function entryTypeLabel(v){
     return ({
       OPENING_BALANCE:tx("الرصيد الأساسي","Base Funding"),
+      OPENING_RECONCILIATION:tx("تسوية رصيد افتتاحية","Opening Reconciliation"),
       TOP_UP:tx("زيادة عهدة","Top-up"),
       TEMPORARY_FUNDING:tx("عهدة مؤقتة","Temporary Funding"),
       SETTLEMENT:tx("تصفية معتمدة","Approved Settlement"),
@@ -171,7 +172,8 @@
       <div class="note"><b>${escV(f.company)} — ${escV(f.name)}</b><br>
       ${tx("الرصيد القائم بالسجل","Ledger Outstanding")}: ${moneyV(ov.ledger_outstanding||0)} |
       ${tx("تمويل قيد الاعتماد","Pending Funding")}: ${moneyV(ov.pending_funding||0)}<br>
-      ${tx("الرصيد لا يزيد إلا بعد تنفيذ الدفعة بنكيًا.","The imprest balance increases only after the linked payment is executed.")}</div>
+      ${tx("الرصيد لا يزيد إلا بعد تنفيذ الدفعة بنكيًا.","The imprest balance increases only after the linked payment is executed.")}<br>
+      ${tx("مستفيد الدفعة يُثبت باسم العهدة الرئيسية لضمان عدم تحويل التمويل إلى جهة مختلفة عن الحساب المرتبط.","The payment beneficiary is fixed to the master imprest name so funding cannot be redirected to a different entity.")}</div>
       <div class="modal-grid" style="margin-top:12px">
         ${select("ifv2_type",tx("نوع التمويل","Funding Type"),[{value:"TOP_UP",label:tx("زيادة العهدة الحالية","Top-up Existing Imprest")},{value:"TEMPORARY_FUNDING",label:tx("عهدة مؤقتة لغرض محدد","Temporary Funding")}])}
         ${input("ifv2_amount",tx("المبلغ","Amount"),0,"number")}
