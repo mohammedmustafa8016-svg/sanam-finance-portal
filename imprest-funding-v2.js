@@ -283,6 +283,16 @@
   }
   window.imprestFundingError=imprestFundingError;
 
+  const originalImprestErrorMessage=window.imprestErrorMessage;
+  window.imprestErrorMessage=function(message=""){
+    const m=String(message||"");
+    if(m.includes("IMPREST_HAS_FUNDING_HISTORY"))return tx(
+      "لا يمكن حذف حساب العهدة لوجود سجل تمويل أو حركات مالية مرتبطة به. يجب الحفاظ على السجل التاريخي.",
+      "This imprest account cannot be deleted because it has funding or ledger history. The audit trail must be preserved."
+    );
+    return typeof originalImprestErrorMessage==="function"?originalImprestErrorMessage(message):imprestFundingError(message);
+  };
+
   const originalSaveImprest=window.saveImprest;
   if(typeof originalSaveImprest==="function"){
     window.saveImprest=async function(id=""){
