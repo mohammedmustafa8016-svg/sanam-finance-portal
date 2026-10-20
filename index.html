@@ -72,6 +72,7 @@ input,select,textarea{width:100%;padding:10px;border:1px solid var(--border);bor
 <link rel="stylesheet" href="/column-personalization-v3.css">
 <link rel="stylesheet" href="/reserve-reconciliation-v2-shadow.css">
 <link rel="stylesheet" href="/password-recovery.css">
+<link rel="stylesheet" href="/imprest-funding-v2.css">
 </head>
 <body>
 <div id="authScreen" class="auth">
@@ -149,6 +150,7 @@ input,select,textarea{width:100%;padding:10px;border:1px solid var(--border);bor
 <section id="imprest" class="section">
 <div class="row" style="margin-bottom:12px"><div><h3 style="margin:0">العهد</h3><div class="muted">متابعة أرصدة العهد وملفات التصفية المفتوحة حتى اعتماد المشرف.</div></div><button id="addImprestBtn" class="btn primary" type="button" onclick="openImprestModal()">+ إضافة عهدة</button></div>
 <div class="table-wrap"><table id="imprestTable"><thead><tr><th>النوع</th><th>الشركة</th><th>العهدة</th><th>المسؤول</th><th>الرصيد</th><th>غير مسوى</th><th>تحت التصفية</th><th>متاح للتصفية</th><th>مصفي معتمد</th><th>العمر</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="imprestBody"></tbody></table></div>
+<div id="imprestFundingV2Panel"></div>
 <div class="row" style="margin:18px 0 10px"><div><h3 style="margin:0">ملفات تصفية العهد</h3><div class="muted">كل ملف تصفية مرتبط بمهمة فعلية في مركز العمل ويخضع لمراجعة المشرف.</div></div></div>
 <div class="table-wrap"><table id="imprestSettlementsTable"><thead><tr><th>الاستلام</th><th>العهدة</th><th>الموظف</th><th>المبلغ</th><th>عدد الفواتير</th><th>موعد المهمة</th><th>حالة التصفية</th><th>حالة المهمة</th><th>المراجعة</th><th>إجراء</th></tr></thead><tbody id="imprestSettlementsBody"></tbody></table></div>
 </section>
@@ -707,6 +709,7 @@ async function loadAudit(showFeedback=false){
 <script src="/reserve-reconciliation-v2-shadow.js"></script>
 <script src="/password-recovery.js"></script>
 <script src="/task-working-calendar.js"></script>
+<script src="/imprest-funding-v2.js"></script>
 <script>init();</script>
 </body>
 </html>
