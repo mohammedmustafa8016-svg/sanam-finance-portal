@@ -1,0 +1,8 @@
+.imprest-v2-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.imprest-v2-summary .card b,.imprest-v2-ledger-kpis .card b{display:block;font-size:18px;margin-top:4px}
+.imprest-v2-control-note{margin:8px 0 14px}
+.imprest-v2-actions{display:inline-flex;gap:5px;flex-wrap:wrap;margin-inline-start:5px}
+.imprest-v2-ledger-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+#imprestFundingV2Panel{margin:14px 0 4px}
+@media(max-width:1100px){.imprest-v2-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.imprest-v2-ledger-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.imprest-v2-summary,.imprest-v2-ledger-kpis{grid-template-columns:1fr}.imprest-v2-actions{display:flex;margin:6px 0 0}}
