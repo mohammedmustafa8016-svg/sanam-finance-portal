@@ -111,6 +111,10 @@
       return a;
     },{base:0,add:0,pending:0,out:0});
     const legacy=legacyDuplicateCount();
+    const ledgerVariances=state.overview.filter(x=>{
+      const f=fundById(x.imprest_fund_id);
+      return f && Math.abs(Number(x.ledger_outstanding||0)-Number(f.unsettled||0))>0.01;
+    });
     const rows=state.requests.slice(0,50).map(r=>`<tr>
       <td>${typeof fmt==="function"?fmt(r.requested_at):escV(r.requested_at)}</td>
       <td>${escV(r.fund_name)}</td>
@@ -129,6 +133,7 @@
         <div class="card"><span class="muted">${tx("تمويل قيد الاعتماد","Pending Funding")}</span><b>${moneyV(total.pending)}</b></div>
         <div class="card"><span class="muted">${tx("الرصيد القائم بالسجل","Ledger Outstanding")}</span><b>${moneyV(total.out)}</b></div>
       </div>
+      ${ledgerVariances.length?`<div class="warning-box"><b>${tx("تنبيه رقابي:","Control alert:")}</b> ${tx("يوجد فرق بين الرصيد القائم في سجل الحركات وحقل «غير مسوى» في بعض العهد. لم يتم إجراء أي تصحيح تلقائي؛ راجع الحركة قبل أي تعديل.","A variance exists between the ledger outstanding balance and the operational unsettled field for one or more imprests. No automatic correction was made; review the movements before changing data.")} (${ledgerVariances.length})</div>`:""}
       <div class="note imprest-v2-control-note">
         <b>${tx("ضابط رقابي:","Control rule:")}</b>
         ${tx("أي مبلغ إضافي ينشئ دفعة داخل دورة المدفوعات الحالية، ولا يزيد رصيد العهدة إلا بعد التنفيذ البنكي الفعلي. مبلغ العهدة الأصلي محفوظ في سجل الحركات ولا يتم استبداله.","Each additional amount creates a payment in the existing payment workflow. The imprest balance increases only after actual bank execution. The base funding remains preserved in the ledger.")}
