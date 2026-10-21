@@ -420,6 +420,153 @@
   }
   window.refreshImprestWorkspaceV3=refreshWorkspaceData;
 
+
+  let imprestActionMenuEl=null;
+  let imprestActionObserver=null;
+  let imprestActionCompactScheduled=false;
+
+  function closeImprestActionMenuV3(){
+    if(imprestActionMenuEl){
+      imprestActionMenuEl.remove();
+      imprestActionMenuEl=null;
+    }
+    document.querySelectorAll("#imprestBody .imprest-action-trigger[aria-expanded='true']").forEach(btn=>btn.setAttribute("aria-expanded","false"));
+  }
+  window.closeImprestActionMenuV3=closeImprestActionMenuV3;
+
+  function imprestActionRank(button){
+    const h=String(button?.getAttribute("onclick")||"");
+    if(h.includes("openImprestSettlementModal"))return 10;
+    if(h.includes("openImprestLedgerV2"))return 20;
+    if(h.includes("openImprestFundingV2"))return 30;
+    if(h.includes("openImprestRefundV2"))return 40;
+    if(h.includes("openImprestModal"))return 50;
+    if(h.includes("deleteImprest"))return 90;
+    return 60;
+  }
+
+  function openImprestActionMenuV3(trigger){
+    const cell=trigger?.closest(".imprest-action-cell");
+    const source=cell?.querySelector(":scope > .imprest-action-source");
+    if(!cell||!source)return;
+    const buttons=[...source.querySelectorAll("button")].filter(btn=>!btn.disabled&&!btn.classList.contains("hidden")).sort((a,b)=>imprestActionRank(a)-imprestActionRank(b));
+    closeImprestActionMenuV3();
+    if(!buttons.length)return;
+
+    const menu=document.createElement("div");
+    menu.className="imprest-action-popover";
+    menu.setAttribute("role","menu");
+    menu.dir=document.documentElement.dir||"rtl";
+    buttons.forEach(original=>{
+      const item=document.createElement("button");
+      item.type="button";
+      item.className="imprest-action-menu-item";
+      if(original.classList.contains("danger")||String(original.getAttribute("onclick")||"").includes("deleteImprest"))item.classList.add("danger");
+      if(original.classList.contains("primary"))item.classList.add("primary-action");
+      item.setAttribute("role","menuitem");
+      item.textContent=String(original.textContent||"").trim();
+      item.onclick=()=>{
+        closeImprestActionMenuV3();
+        original.click();
+      };
+      menu.appendChild(item);
+    });
+
+    document.body.appendChild(menu);
+    imprestActionMenuEl=menu;
+    trigger.setAttribute("aria-expanded","true");
+
+    const rect=trigger.getBoundingClientRect();
+    const width=Math.min(250,Math.max(190,menu.getBoundingClientRect().width||210));
+    menu.style.width=width+"px";
+    const measured=menu.getBoundingClientRect();
+    const rtl=(document.documentElement.dir||"rtl")==="rtl";
+    const desiredLeft=rtl?rect.right-width:rect.left;
+    const left=Math.max(8,Math.min(desiredLeft,window.innerWidth-width-8));
+    const below=rect.bottom+6;
+    const top=below+measured.height<=window.innerHeight-8?below:Math.max(8,rect.top-measured.height-6);
+    menu.style.left=left+"px";
+    menu.style.top=top+"px";
+  }
+  window.openImprestActionMenuV3=openImprestActionMenuV3;
+
+  function compactImprestActions(){
+    document.querySelectorAll("#imprestBody tr").forEach(tr=>{
+      const cell=tr.lastElementChild;
+      if(!cell)return;
+      cell.classList.add("imprest-action-cell");
+
+      let source=cell.querySelector(":scope > .imprest-action-source");
+      if(!source){
+        source=document.createElement("div");
+        source.className="imprest-action-source";
+        cell.appendChild(source);
+      }
+
+      [...cell.querySelectorAll(":scope > .task-actions-wrap, :scope > .imprest-v2-actions")].forEach(wrap=>{
+        [...wrap.querySelectorAll("button")].forEach(btn=>source.appendChild(btn));
+        wrap.remove();
+      });
+
+      [...cell.querySelectorAll(":scope > button:not(.imprest-action-trigger)")].forEach(btn=>source.appendChild(btn));
+
+      const count=[...source.querySelectorAll("button")].filter(btn=>!btn.disabled&&!btn.classList.contains("hidden")).length;
+      let trigger=cell.querySelector(":scope > .imprest-action-trigger");
+      if(!count){
+        trigger?.remove();
+        if(!cell.textContent.trim())cell.textContent="—";
+        return;
+      }
+
+      if(cell.childNodes.length&&[...cell.childNodes].some(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim()==="—")){
+        [...cell.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim()==="—").forEach(n=>n.remove());
+      }
+
+      if(!trigger){
+        trigger=document.createElement("button");
+        trigger.type="button";
+        trigger.className="imprest-action-trigger";
+        trigger.innerHTML="<span aria-hidden='true'>⋮</span>";
+        trigger.onclick=ev=>{
+          ev.stopPropagation();
+          if(imprestActionMenuEl&&trigger.getAttribute("aria-expanded")==="true")closeImprestActionMenuV3();
+          else openImprestActionMenuV3(trigger);
+        };
+        cell.appendChild(trigger);
+      }
+      trigger.title=tx("الإجراءات","Actions");
+      trigger.setAttribute("aria-label",tx("الإجراءات","Actions"));
+      trigger.setAttribute("aria-haspopup","menu");
+      trigger.setAttribute("aria-expanded","false");
+    });
+  }
+  window.compactImprestActionsV3=compactImprestActions;
+
+  function scheduleImprestActionCompact(){
+    if(imprestActionCompactScheduled)return;
+    imprestActionCompactScheduled=true;
+    setTimeout(()=>{
+      imprestActionCompactScheduled=false;
+      compactImprestActions();
+    },0);
+  }
+
+  function ensureImprestActionObserver(){
+    const body=document.getElementById("imprestBody");
+    if(!body||imprestActionObserver)return;
+    imprestActionObserver=new MutationObserver(scheduleImprestActionCompact);
+    imprestActionObserver.observe(body,{childList:true,subtree:true});
+  }
+
+  document.addEventListener("pointerdown",ev=>{
+    if(!imprestActionMenuEl)return;
+    if(imprestActionMenuEl.contains(ev.target)||ev.target.closest?.(".imprest-action-trigger"))return;
+    closeImprestActionMenuV3();
+  },true);
+  document.addEventListener("keydown",ev=>{if(ev.key==="Escape")closeImprestActionMenuV3()});
+  document.addEventListener("scroll",()=>closeImprestActionMenuV3(),true);
+  window.addEventListener("resize",()=>closeImprestActionMenuV3(),{passive:true});
+
   function postRender(){
     ensureWorkspace();
     const registerPanel=document.getElementById("imprestWorkspacePanel_register");
@@ -434,6 +581,8 @@
       settlementPanel.appendChild(settlementWrap);
     }
     document.getElementById("imprestFundingV2Panel")?.classList.add("imprest-v2-source-hidden");
+    ensureImprestActionObserver();
+    scheduleImprestActionCompact();
     renderOverview();
     setTimeout(()=>void refreshWorkspaceData(false),0);
   }
