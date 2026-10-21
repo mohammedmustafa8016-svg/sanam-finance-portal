@@ -50,3 +50,36 @@
 @media(max-width:520px){
   .imprest-workspace-kpis,.imprest-workspace-kpis.secondary,.imprest-control-summary{grid-template-columns:1fr}
 }
+
+
+/* Compact overflow actions for the Imprest Register */
+#imprestTable .imprest-action-cell{
+  width:58px;min-width:58px;max-width:58px;text-align:center!important;overflow:visible
+}
+#imprestTable .imprest-action-source{display:none!important}
+.imprest-action-trigger{
+  width:36px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);background:#fff;color:var(--text);border-radius:7px;
+  cursor:pointer;font-size:22px;font-weight:800;line-height:1;padding:0
+}
+.imprest-action-trigger:hover,.imprest-action-trigger[aria-expanded="true"]{
+  background:#f1f5f9;border-color:#b9c4d0;color:var(--nav)
+}
+.imprest-action-popover{
+  position:fixed;z-index:14000;min-width:190px;max-width:250px;
+  padding:6px;background:var(--card);color:var(--text);
+  border:1px solid var(--border);border-radius:9px;
+  box-shadow:0 14px 34px rgba(15,39,64,.20)
+}
+.imprest-action-menu-item{
+  width:100%;display:flex;align-items:center;justify-content:flex-start;
+  border:0;background:transparent;color:var(--text);
+  padding:9px 10px;border-radius:6px;cursor:pointer;
+  white-space:nowrap;text-align:start;font-size:13px
+}
+.imprest-action-menu-item:hover{background:#f3f6f9}
+.imprest-action-menu-item.primary-action{font-weight:700;color:var(--nav)}
+.imprest-action-menu-item.danger{color:var(--red)}
+.imprest-action-menu-item.danger:hover{background:#fff2f2}
+[dir="rtl"] .imprest-action-menu-item{justify-content:flex-start;text-align:right}
+[dir="ltr"] .imprest-action-menu-item{justify-content:flex-start;text-align:left}
