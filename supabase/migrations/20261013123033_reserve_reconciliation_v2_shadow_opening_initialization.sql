@@ -27,14 +27,20 @@ begin
   join public.bank_liquidity bl on bl.id=b.id
   where b.account_type <> 'Operational';
 
-  if v_accounts <> 2 then
-    raise exception 'Expected exactly 2 non-operational reserve accounts; found %', v_accounts;
-  end if;
-
   select count(*)
   into v_cfo
   from public.profiles
   where role='CFO' and active=true;
+
+  -- A pristine fresh rebuild has no operational bank accounts or auth-backed profiles yet.
+  -- In that exact state the shadow-opening DML below naturally inserts zero rows.
+  if v_accounts = 0 and v_cfo = 0 then
+    return;
+  end if;
+
+  if v_accounts <> 2 then
+    raise exception 'Expected exactly 2 non-operational reserve accounts; found %', v_accounts;
+  end if;
 
   if v_cfo <> 1 then
     raise exception 'Expected exactly 1 active CFO profile; found %', v_cfo;
@@ -236,11 +242,28 @@ declare
   v_openings bigint;
   v_snapshots bigint;
   v_movements bigint;
+  v_source_accounts bigint;
+  v_source_cfo bigint;
 begin
   select count(*) into v_accounts from public.reserve_reconciliation_accounts;
   select count(*) into v_openings from public.reserve_v2_opening_reconciliations;
   select count(*) into v_snapshots from public.reserve_balance_snapshots;
   select count(*) into v_movements from public.reserve_reconciliation_movements;
+  select count(*) into v_source_accounts
+  from public.bank_accounts
+  where account_type <> 'Operational';
+  select count(*) into v_source_cfo
+  from public.profiles
+  where role='CFO' and active=true;
+
+  if v_source_accounts = 0 and v_source_cfo = 0 then
+    if v_accounts <> 0 or v_openings <> 0 or v_snapshots <> 0 or v_movements <> 0 then
+      raise exception
+        'Unexpected V2 rows in pristine rebuild: accounts %, openings %, snapshots %, movements %',
+        v_accounts, v_openings, v_snapshots, v_movements;
+    end if;
+    return;
+  end if;
 
   if v_accounts <> 2 or v_openings <> 2 or v_snapshots <> 2 or v_movements <> 2 then
     raise exception
