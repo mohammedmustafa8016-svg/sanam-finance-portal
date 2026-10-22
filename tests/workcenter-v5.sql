@@ -9,6 +9,7 @@ begin
  update private.workcenter_cycles set active=false where active;
  insert into private.workcenter_cycles(label,started_at,active) values('ROLLBACK TEST',now()-interval '1 second',true) returning id into cycle;
  perform set_config('request.jwt.claim.sub',cfo::text,true);
+ perform public.set_workflow_v3_enabled(true,'CI Work Center regression fixture');
  d:=public.get_workcenter_dashboard_v5('team','{}');
  if (d#>>'{summary,total}')::int<>0 then raise exception 'RESET_NOT_EMPTY'; end if;
  select id into old_item from public.work_items order by created_at limit 1;
