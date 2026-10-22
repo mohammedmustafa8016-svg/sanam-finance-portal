@@ -10,7 +10,27 @@ create table private._workcenter_v5_baseline_test(
   available_actions jsonb not null
 );
 
-do $$
+drop table if exists private._workcenter_v5_security_baseline_test;
+create table private._workcenter_v5_security_baseline_test as
+select
+  p.prosecdef,
+  p.provolatile,
+  p.proconfig,
+  p.proacl
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname='get_workcenter_dashboard_v5'
+  and pg_get_function_identity_arguments(p.oid)='p_scope text, p_filters jsonb';
+
+do $
+begin
+  if (select count(*) from private._workcenter_v5_security_baseline_test) <> 1 then
+    raise exception 'WORKCENTER_V5_SECURITY_BASELINE_MISSING';
+  end if;
+end $;
+
+do $
 declare
   v_cfo uuid:='00000000-0000-4000-8000-000000000001'::uuid;
   v_started timestamptz;
