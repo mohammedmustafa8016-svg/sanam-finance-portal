@@ -45,7 +45,7 @@ begin
  if (d#>>'{summary,attention}')::int<>1 then raise exception 'BLOCK_NOT_CLASSIFIED'; end if;
  r:=public.try_perform_work_item_action_v5(item_id,'RESOLVE_BLOCKER','{}');
  if not (r->>'ok')::boolean then raise exception 'UNBLOCK: %',r; end if;
- r:=public.try_perform_work_item_action_v5(item_id,'REQUEST_EXTENSION',jsonb_build_object('requested_due_date',(now() at time zone 'Asia/Riyadh')::date+2,'requested_due_time','17:00','justification','Source delay'));
+ r:=public.try_perform_work_item_action_v5(item_id,'REQUEST_EXTENSION',jsonb_build_object('requested_due_date',(now() at time zone 'Asia/Riyadh')::date+7,'requested_due_time','17:00','justification','Source delay'));
  if not (r->>'ok')::boolean then raise exception 'EXTENSION: %',r; end if;
  perform set_config('request.jwt.claim.sub',sup::text,true);
  d:=public.get_workcenter_dashboard_v5('team','{}');
