@@ -48,4 +48,38 @@ begin
   raise notice 'WORKCENTER_V5_CONTRACT_MISMATCHES=0';
 end $$;
 
+do $
+declare
+  v_mismatch bigint;
+begin
+  select count(*)
+  into v_mismatch
+  from private._workcenter_v5_security_baseline_test b
+  full join (
+    select
+      p.prosecdef,
+      p.provolatile,
+      p.proconfig,
+      p.proacl
+    from pg_proc p
+    join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public'
+      and p.proname='get_workcenter_dashboard_v5'
+      and pg_get_function_identity_arguments(p.oid)='p_scope text, p_filters jsonb'
+  ) c
+    on b.prosecdef is not distinct from c.prosecdef
+   and b.provolatile is not distinct from c.provolatile
+   and b.proconfig is not distinct from c.proconfig
+   and b.proacl is not distinct from c.proacl
+  where b.prosecdef is null or c.prosecdef is null;
+
+  if v_mismatch <> 0 then
+    raise exception 'WORKCENTER_V5_SECURITY_CONTRACT_CHANGED';
+  end if;
+
+  raise notice 'WORKCENTER_V5_SECURITY_CONTRACT=UNCHANGED';
+end $;
+
+drop table private._workcenter_v5_security_baseline_test;
+
 drop table private._workcenter_v5_baseline_test;
