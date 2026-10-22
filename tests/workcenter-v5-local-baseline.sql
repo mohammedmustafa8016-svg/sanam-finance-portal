@@ -1,4 +1,4 @@
--- Capture stable Work Center output from the current V5 implementation before patching.
+-- Capture stable Work Center output and RPC security contract before patching.
 \set ON_ERROR_STOP on
 
 drop table if exists private._workcenter_v5_baseline_test;
@@ -23,14 +23,15 @@ where n.nspname='public'
   and p.proname='get_workcenter_dashboard_v5'
   and pg_get_function_identity_arguments(p.oid)='p_scope text, p_filters jsonb';
 
-do $
+do $security_baseline$
 begin
   if (select count(*) from private._workcenter_v5_security_baseline_test) <> 1 then
     raise exception 'WORKCENTER_V5_SECURITY_BASELINE_MISSING';
   end if;
-end $;
+end
+$security_baseline$;
 
-do $
+do $dashboard_baseline$
 declare
   v_cfo uuid:='00000000-0000-4000-8000-000000000001'::uuid;
   v_started timestamptz;
@@ -58,4 +59,5 @@ begin
   end if;
 
   raise notice 'BASELINE_WORKCENTER_V5_MS=%',round(v_elapsed,1);
-end $$;
+end
+$dashboard_baseline$;
