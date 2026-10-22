@@ -19,7 +19,13 @@ begin
   )) <> 4 then
     raise exception 'Synthetic profile bootstrap failed';
   end if;
-end $$;
+end $;
+
+-- Production currently keeps Workflow V3 generation disabled as an operational switch.
+-- Enable it only inside this disposable local fixture so synthetic tasks generate governed Work Items.
+update public.finance_settings
+set setting_value='true'::jsonb
+where setting_key='workflow_v3_enabled';
 
 insert into public.tasks (
   name,frequency,owner_id,reviewer_id,due_date,due_time,priority,status,output,
