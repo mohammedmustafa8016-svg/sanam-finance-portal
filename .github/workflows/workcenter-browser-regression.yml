@@ -1,0 +1,61 @@
+name: Work Center Browser Regression
+
+on:
+  push:
+    branches:
+      - stability-integration-test
+    paths:
+      - "index.html"
+      - "workcenter-v5.js"
+      - "workcenter-v5.css"
+      - "tests/fixture-client.js"
+      - "tests/serve-preview.cjs"
+      - "tests/workcenter-v5-browser.cjs"
+      - ".github/workflows/workcenter-browser-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install pinned Playwright client only
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: npm install --no-save --ignore-scripts playwright@1.64.1
+
+      - name: Start isolated fixture preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/serve-preview.cjs > /tmp/sanam-preview.log 2>&1 &
+          echo $! > /tmp/sanam-preview.pid
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/sanam-preview.log
+          exit 1
+
+      - name: Run Work Center browser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" node tests/workcenter-v5-browser.cjs
+
+      - name: Stop fixture preview
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/sanam-preview.pid ]; then
+            kill "$(cat /tmp/sanam-preview.pid)" || true
+          fi
