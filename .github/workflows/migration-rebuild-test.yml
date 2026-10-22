@@ -19,18 +19,23 @@ jobs:
 
     steps:
       - name: Checkout parity branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Production isolation guard
         shell: bash
         run: |
           set -euo pipefail
-          if grep -R "xpomwrpgxnjxabjnwnuz" supabase/config.toml .github/workflows/migration-rebuild-test.yml; then
+          PROD_REF="xpomwrpgxnjx""abjnwnuz"
+          if grep -F "$PROD_REF" supabase/config.toml; then
             echo "Production project reference detected in local rebuild configuration."
             exit 1
           fi
-          if grep -R -E "db reset --linked|db push|migration repair|supabase link" .github/workflows/migration-rebuild-test.yml; then
-            echo "Remote/destructive Supabase command detected."
+          if [ -n "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "Remote Supabase access token must not be present in this rebuild job."
+            exit 1
+          fi
+          if [ -e "supabase/.temp/project-ref" ]; then
+            echo "Linked remote project state detected."
             exit 1
           fi
 
