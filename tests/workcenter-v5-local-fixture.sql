@@ -19,7 +19,7 @@ begin
   )) <> 4 then
     raise exception 'Synthetic profile bootstrap failed';
   end if;
-end $$;
+end $fixture$;
 
 -- Production currently keeps Workflow V3 generation disabled as an operational switch.
 -- Enable it only inside this disposable local fixture so synthetic tasks generate governed Work Items.
@@ -62,7 +62,7 @@ select
   g::text
 from generate_series(1,1400) g;
 
-do $
+do $fixture$
 declare
   v_work_items bigint;
   v_cycle_items bigint;
