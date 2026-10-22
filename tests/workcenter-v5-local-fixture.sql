@@ -22,11 +22,15 @@ begin
 end
 $check_profiles$;
 
--- Production currently keeps Workflow V3 generation disabled as an operational switch.
--- Enable it only inside this disposable local fixture so synthetic tasks generate governed Work Items.
-update public.finance_settings
-set setting_value='true'::jsonb
-where setting_key='workflow_v3_enabled';
+-- Ensure the disposable local fixture uses the same enabled workflow/rule-engine switches
+-- as the current Production baseline, without touching any remote environment.
+insert into public.workflow_engine_settings(setting_key,enabled)
+values
+  ('workflow_v3',true),
+  ('workcenter_rule_engine_enabled',true)
+on conflict(setting_key) do update
+set enabled=excluded.enabled,
+    updated_at=now();
 
 insert into public.tasks (
   name,frequency,owner_id,reviewer_id,due_date,due_time,priority,status,output,
