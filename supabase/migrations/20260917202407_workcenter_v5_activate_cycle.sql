@@ -1,3 +1,5 @@
+begin;
+
 -- Operational reset only. No task, payment, activity or performance record is deleted.
 -- Run once after V5 validation and immediately before the frontend production release.
 lock table public.work_items in share row exclusive mode;
@@ -12,3 +14,4 @@ select 'دورة التشغيل الجديدة',clock_timestamp(),true,jsonb_bui
 )
 where not exists(select 1 from private.workcenter_cycles where active);
 
+commit;
