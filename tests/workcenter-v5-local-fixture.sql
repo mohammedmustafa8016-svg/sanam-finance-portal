@@ -62,16 +62,48 @@ select
   g::text
 from generate_series(1,1400) g;
 
-do $$
+do $
 declare
-  v_items bigint;
+  v_work_items bigint;
+  v_cycle_items bigint;
+  v_cycle uuid;
 begin
-  select count(*) into v_items
+  select count(*) into v_work_items
   from public.work_items w
-  join private.workcenter_cycle_items m on m.work_item_id=w.id
-  join private.workcenter_cycles c on c.id=m.cycle_id and c.active
-  where w.performance_credit;
-  if v_items < 1300 then
-    raise exception 'Synthetic Work Center fixture generated only % cycle items',v_items;
+  join public.tasks t on t.id::text=w.source_entity_id
+  where w.source_entity_type='task'
+    and t.source_entity_type='synthetic_local_test';
+
+  if v_work_items < 1300 then
+    raise exception 'Synthetic workflow generated only % Work Items',v_work_items;
   end if;
-end $$;
+
+  select id into v_cycle
+  from private.workcenter_cycles
+  where active
+  limit 1;
+
+  if v_cycle is null then
+    raise exception 'No active local Work Center cycle';
+  end if;
+
+  insert into private.workcenter_cycle_items(cycle_id,work_item_id)
+  select v_cycle,w.id
+  from public.work_items w
+  join public.tasks t on t.id::text=w.source_entity_id
+  where w.source_entity_type='task'
+    and t.source_entity_type='synthetic_local_test'
+    and w.performance_credit
+    and w.status not in ('Waiting','Cancelled','Closed')
+  on conflict do nothing;
+
+  select count(*) into v_cycle_items
+  from private.workcenter_cycle_items m
+  where m.cycle_id=v_cycle;
+
+  if v_cycle_items < 1300 then
+    raise exception 'Synthetic Work Center fixture generated only % cycle items',v_cycle_items;
+  end if;
+
+  raise notice 'SYNTHETIC_WORK_ITEMS=% CYCLE_ITEMS=%',v_work_items,v_cycle_items;
+end $;
