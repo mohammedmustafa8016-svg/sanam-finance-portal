@@ -1,0 +1,66 @@
+name: Migration Rebuild Test
+
+on:
+  push:
+    branches:
+      - migration-parity-rebuild
+    paths:
+      - "supabase/**"
+      - ".github/workflows/migration-rebuild-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fresh-rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout parity branch
+        uses: actions/checkout@v4
+
+      - name: Production isolation guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R "xpomwrpgxnjxabjnwnuz" supabase/config.toml .github/workflows/migration-rebuild-test.yml; then
+            echo "Production project reference detected in local rebuild configuration."
+            exit 1
+          fi
+          if grep -R -E "db reset --linked|db push|migration repair|supabase link" .github/workflows/migration-rebuild-test.yml; then
+            echo "Remote/destructive Supabase command detected."
+            exit 1
+          fi
+
+      - name: Pin and verify Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 --version
+          npx --yes supabase@2.121.0 start --help >/dev/null
+          npx --yes supabase@2.121.0 db reset --help >/dev/null
+
+      - name: Start isolated local Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 start
+
+      - name: Fresh rebuild from all migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 db reset --local
+
+      - name: Verify local migration history
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 migration list --local
+
+      - name: Stop disposable local stack
+        if: always()
+        shell: bash
+        run: npx --yes supabase@2.121.0 stop --no-backup || true

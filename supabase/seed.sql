@@ -1,0 +1,3 @@
+-- Local/disposable development seed.
+-- Intentionally contains no Production users, emails, balances, payments, or business data.
+-- The initial migration already creates synthetic allowed_users for role/bootstrap validation.
