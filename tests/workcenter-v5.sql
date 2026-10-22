@@ -6,6 +6,7 @@ begin
  select id into sup from public.profiles where active and role='Supervisor' limit 1;
  select id into emp from public.profiles where active and role='BankAccountant' limit 1;
  select id into other_emp from public.profiles where active and role='ARAccountant' limit 1;
+ update private.workcenter_cycles set active=false where active;
  insert into private.workcenter_cycles(label,started_at,active) values('ROLLBACK TEST',now()-interval '1 second',true) returning id into cycle;
  perform set_config('request.jwt.claim.sub',cfo::text,true);
  d:=public.get_workcenter_dashboard_v5('team','{}');
