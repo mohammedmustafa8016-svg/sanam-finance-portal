@@ -1,7 +1,7 @@
--- Verify the optimized function preserves the stable per-item contract.
+-- Verify optimized Work Center preserves data, authorization, and security contracts.
 \set ON_ERROR_STOP on
 
-do $$
+do $dashboard_compare$
 declare
   v_cfo uuid:='00000000-0000-4000-8000-000000000001'::uuid;
   v_started timestamptz;
@@ -46,9 +46,10 @@ begin
 
   raise notice 'OPTIMIZED_WORKCENTER_V5_MS=%',round(v_elapsed,1);
   raise notice 'WORKCENTER_V5_CONTRACT_MISMATCHES=0';
-end $$;
+end
+$dashboard_compare$;
 
-do $
+do $security_compare$
 declare
   v_mismatch bigint;
 begin
@@ -78,8 +79,8 @@ begin
   end if;
 
   raise notice 'WORKCENTER_V5_SECURITY_CONTRACT=UNCHANGED';
-end $;
+end
+$security_compare$;
 
 drop table private._workcenter_v5_security_baseline_test;
-
 drop table private._workcenter_v5_baseline_test;
