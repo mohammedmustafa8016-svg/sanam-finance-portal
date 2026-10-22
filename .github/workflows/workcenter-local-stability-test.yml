@@ -1,0 +1,67 @@
+name: Work Center Local Stability Test
+
+on:
+  push:
+    branches:
+      - stability-integration-test
+    paths:
+      - "supabase/**"
+      - "tests/workcenter-v5-*.sql"
+      - "workcenter-v5.js"
+      - ".github/workflows/workcenter-local-stability-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  workcenter-stability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Production isolation guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROD_REF="xpomwrpgxnjx""abjnwnuz"
+          if grep -F "$PROD_REF" supabase/config.toml; then exit 1; fi
+          if [ -n "${SUPABASE_ACCESS_TOKEN:-}" ]; then exit 1; fi
+          if [ -e "supabase/.temp/project-ref" ]; then exit 1; fi
+
+      - name: Verify tools
+        run: |
+          npx --yes supabase@2.121.0 --version
+          psql --version
+
+      - name: Start and rebuild local Supabase
+        run: |
+          npx --yes supabase@2.121.0 start
+          npx --yes supabase@2.121.0 db reset --local
+
+      - name: Generate synthetic workload
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$PGURL" -f tests/workcenter-v5-local-fixture.sql
+
+      - name: Capture current Work Center contract
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$PGURL" -f tests/workcenter-v5-local-baseline.sql
+
+      - name: Apply development-only optimization
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$PGURL" -f supabase/patches/workcenter_v5_set_based_actions.sql
+
+      - name: Contract and performance gate
+        env:
+          PGURL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          psql "$PGURL" -f tests/workcenter-v5-local-compare.sql
+          psql "$PGURL" -f tests/workcenter-v5-performance.sql
+
+      - name: Stop disposable local stack
+        if: always()
+        run: npx --yes supabase@2.121.0 stop --no-backup || true
