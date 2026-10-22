@@ -51,12 +51,17 @@ $dashboard_compare$;
 
 do $security_compare$
 declare
-  v_mismatch bigint;
+  v_before jsonb;
+  v_after jsonb;
 begin
-  select count(*)
-  into v_mismatch
+  select to_jsonb(b)
+  into v_before
   from private._workcenter_v5_security_baseline_test b
-  full join (
+  limit 1;
+
+  select to_jsonb(c)
+  into v_after
+  from (
     select
       p.prosecdef,
       p.provolatile,
@@ -67,14 +72,9 @@ begin
     where n.nspname='public'
       and p.proname='get_workcenter_dashboard_v5'
       and pg_get_function_identity_arguments(p.oid)='p_scope text, p_filters jsonb'
-  ) c
-    on b.prosecdef is not distinct from c.prosecdef
-   and b.provolatile is not distinct from c.provolatile
-   and b.proconfig is not distinct from c.proconfig
-   and b.proacl is not distinct from c.proacl
-  where b.prosecdef is null or c.prosecdef is null;
+  ) c;
 
-  if v_mismatch <> 0 then
+  if v_before is null or v_after is null or v_before is distinct from v_after then
     raise exception 'WORKCENTER_V5_SECURITY_CONTRACT_CHANGED';
   end if;
 
