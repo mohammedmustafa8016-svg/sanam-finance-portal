@@ -9,7 +9,7 @@ values
  ('00000000-0000-4000-8000-000000000004','gl.accountant@local.invalid','{}'::jsonb)
 on conflict (id) do nothing;
 
-do $$
+do $check_profiles$
 begin
   if (select count(*) from public.profiles where id in (
     '00000000-0000-4000-8000-000000000001'::uuid,
@@ -19,7 +19,8 @@ begin
   )) <> 4 then
     raise exception 'Synthetic profile bootstrap failed';
   end if;
-end $fixture$;
+end
+$check_profiles$;
 
 -- Production currently keeps Workflow V3 generation disabled as an operational switch.
 -- Enable it only inside this disposable local fixture so synthetic tasks generate governed Work Items.
@@ -62,7 +63,7 @@ select
   g::text
 from generate_series(1,1400) g;
 
-do $fixture$
+do $attach_cycle$
 declare
   v_work_items bigint;
   v_cycle_items bigint;
@@ -106,4 +107,5 @@ begin
   end if;
 
   raise notice 'SYNTHETIC_WORK_ITEMS=% CYCLE_ITEMS=%',v_work_items,v_cycle_items;
-end $;
+end
+$attach_cycle$;
