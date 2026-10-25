@@ -67,6 +67,15 @@ jobs:
           psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 \
             -f supabase/patches/workcenter_v5_set_based_actions.sql
 
+      - name: Apply development-only security hardening candidate
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -f supabase/patches/security_revoke_internal_permission_seed.sql
+
       - name: Run Security and RLS audit
         shell: bash
         env:
