@@ -1,0 +1,88 @@
+name: Security and RLS Gate
+
+on:
+  push:
+    branches:
+      - integration-workcenter-v5-rebuild
+    paths:
+      - "supabase/**"
+      - "tests/security-rls-audit.sql"
+      - ".github/workflows/security-rls-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security-rls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout integration branch
+        uses: actions/checkout@v5
+
+      - name: Production isolation guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROD_REF="xpomwrpgxnjx""abjnwnuz"
+          if grep -R -F "$PROD_REF" supabase/config.toml supabase/seed.sql tests/security-rls-audit.sql; then
+            echo "Production project reference detected in local security test inputs."
+            exit 1
+          fi
+          if [ -n "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "Remote Supabase access token must not be present."
+            exit 1
+          fi
+          if [ -e "supabase/.temp/project-ref" ]; then
+            echo "Linked remote project state detected."
+            exit 1
+          fi
+
+      - name: Pin Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 --version
+
+      - name: Start isolated local Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 start
+
+      - name: Rebuild all migrations locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 db reset --local
+
+      - name: Apply development-only Work Center patch
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -f supabase/patches/workcenter_v5_set_based_actions.sql
+
+      - name: Run Security and RLS audit
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -f tests/security-rls-audit.sql
+
+      - name: Verify migration history remains 72
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 migration list --local
+
+      - name: Stop disposable local stack
+        if: always()
+        shell: bash
+        run: npx --yes supabase@2.121.0 stop --no-backup || true
