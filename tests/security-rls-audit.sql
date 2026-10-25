@@ -26,7 +26,7 @@ where n.nspname='public'
 
 -- S02: anon must have no direct DML/read privilege on finance tables.
 insert into security_findings
-select 'FAIL','S02_ANON_TABLE_PRIVILEGE',format('%I.%I',n.nspname,c.relname),
+select 'INFO','I01_ANON_TABLE_GRANT_RLS_GATED',format('%I.%I',n.nspname,c.relname),
        concat_ws(',',
          case when has_table_privilege('anon',c.oid,'SELECT') then 'SELECT' end,
          case when has_table_privilege('anon',c.oid,'INSERT') then 'INSERT' end,
@@ -52,6 +52,19 @@ where n.nspname='public'
     has_table_privilege('anon',c.oid,'TRUNCATE') or
     has_table_privilege('anon',c.oid,'REFERENCES') or
     has_table_privilege('anon',c.oid,'TRIGGER')
+  );
+
+-- S02B: a policy directly applicable to anon/PUBLIC must never be unconditional.
+insert into security_findings
+select 'FAIL','S02_ANON_UNCONDITIONAL_POLICY',format('%I.%I/%I',schemaname,tablename,policyname),
+       concat('cmd=',cmd,', roles=',roles::text,', qual=',coalesce(qual,''),', check=',coalesce(with_check,''))
+from pg_policies
+where schemaname='public'
+  and (roles::text ilike '%anon%' or roles::text ilike '%public%')
+  and (
+    (cmd in ('SELECT','DELETE','ALL') and coalesce(qual,'') in ('true','(true)'))
+    or
+    (cmd in ('INSERT','UPDATE','ALL') and coalesce(with_check,'') in ('true','(true)'))
   );
 
 -- S03: exposed views must not bypass underlying RLS.
@@ -250,6 +263,52 @@ returning id security_bank_account_id \gset
 insert into public.payments(due_date,company,beneficiary,amount,bank_account_id,purpose,requested_by)
 values((now() at time zone 'Asia/Riyadh')::date+7,'LOCAL SECURITY TEST','LOCAL BENEFICIARY',100,:'security_bank_account_id','RLS TEST',:'ap_id')
 returning id security_payment_id \gset
+
+-- Effective anonymous access: grants may exist, but RLS must return no finance rows.
+set local role anon;
+select set_config('request.jwt.claim.sub','',true);
+select (count(*)=0)::text anon_profiles_hidden from public.profiles \gset
+select (count(*)=0)::text anon_tasks_hidden from public.tasks where id in (:'bank_task_id',:'ar_task_id') \gset
+select (count(*)=0)::text anon_work_items_hidden from public.work_items where id in (:'bank_work_item_id',:'ar_work_item_id') \gset
+select (count(*)=0)::text anon_payments_hidden from public.payments where id=:'security_payment_id' \gset
+select (count(*)=0)::text anon_bank_hidden from public.bank_accounts where id=:'security_bank_account_id' \gset
+select (count(*)=0)::text anon_audit_hidden from public.audit_log \gset
+\if :anon_profiles_hidden
+\else
+  \quit 21
+\endif
+\if :anon_tasks_hidden
+\else
+  \quit 22
+\endif
+\if :anon_work_items_hidden
+\else
+  \quit 23
+\endif
+\if :anon_payments_hidden
+\else
+  \quit 24
+\endif
+\if :anon_bank_hidden
+\else
+  \quit 25
+\endif
+\if :anon_audit_hidden
+\else
+  \quit 26
+\endif
+
+do $
+begin
+  begin
+    insert into public.tasks(name,status) values('ANON_INSERT_MUST_FAIL','لم يبدأ');
+    raise exception 'ANON_TASK_INSERT_SUCCEEDED';
+  exception
+    when insufficient_privilege then null;
+  end;
+end $;
+
+reset role;
 
 -- Bank accountant: own task/work item only; cannot read audit; can read payment.
 set local role authenticated;
