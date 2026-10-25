@@ -264,49 +264,48 @@ insert into public.payments(due_date,company,beneficiary,amount,bank_account_id,
 values((now() at time zone 'Asia/Riyadh')::date+7,'LOCAL SECURITY TEST','LOCAL BENEFICIARY',100,:'security_bank_account_id','RLS TEST',:'ap_id')
 returning id security_payment_id \gset
 
--- Effective anonymous access: grants may exist, but RLS must return no finance rows.
+-- Effective anonymous access: secure outcome may be either permission denial or zero visible rows.
 set local role anon;
 select set_config('request.jwt.claim.sub','',true);
-select (count(*)=0)::text anon_profiles_hidden from public.profiles \gset
-select (count(*)=0)::text anon_tasks_hidden from public.tasks where id in (:'bank_task_id',:'ar_task_id') \gset
-select (count(*)=0)::text anon_work_items_hidden from public.work_items where id in (:'bank_work_item_id',:'ar_work_item_id') \gset
-select (count(*)=0)::text anon_payments_hidden from public.payments where id=:'security_payment_id' \gset
-select (count(*)=0)::text anon_bank_hidden from public.bank_accounts where id=:'security_bank_account_id' \gset
-select (count(*)=0)::text anon_audit_hidden from public.audit_log \gset
-\if :anon_profiles_hidden
-\else
-  \quit 21
-\endif
-\if :anon_tasks_hidden
-\else
-  \quit 22
-\endif
-\if :anon_work_items_hidden
-\else
-  \quit 23
-\endif
-\if :anon_payments_hidden
-\else
-  \quit 24
-\endif
-\if :anon_bank_hidden
-\else
-  \quit 25
-\endif
-\if :anon_audit_hidden
-\else
-  \quit 26
-\endif
 
-do $
+do $$
+declare n bigint;
 begin
+  begin
+    select count(*) into n from public.profiles;
+    if n<>0 then raise exception 'ANON_PROFILES_VISIBLE:%',n; end if;
+  exception when insufficient_privilege then null; end;
+
+  begin
+    select count(*) into n from public.tasks where id in (:'bank_task_id'::uuid,:'ar_task_id'::uuid);
+    if n<>0 then raise exception 'ANON_TASKS_VISIBLE:%',n; end if;
+  exception when insufficient_privilege then null; end;
+
+  begin
+    select count(*) into n from public.work_items where id in (:'bank_work_item_id'::uuid,:'ar_work_item_id'::uuid);
+    if n<>0 then raise exception 'ANON_WORK_ITEMS_VISIBLE:%',n; end if;
+  exception when insufficient_privilege then null; end;
+
+  begin
+    select count(*) into n from public.payments where id=:'security_payment_id'::uuid;
+    if n<>0 then raise exception 'ANON_PAYMENT_VISIBLE:%',n; end if;
+  exception when insufficient_privilege then null; end;
+
+  begin
+    select count(*) into n from public.bank_accounts where id=:'security_bank_account_id'::uuid;
+    if n<>0 then raise exception 'ANON_BANK_VISIBLE:%',n; end if;
+  exception when insufficient_privilege then null; end;
+
+  begin
+    select count(*) into n from public.audit_log;
+    if n<>0 then raise exception 'ANON_AUDIT_VISIBLE:%',n; end if;
+  exception when insufficient_privilege then null; end;
+
   begin
     insert into public.tasks(name,status) values('ANON_INSERT_MUST_FAIL','لم يبدأ');
     raise exception 'ANON_TASK_INSERT_SUCCEEDED';
-  exception
-    when insufficient_privilege then null;
-  end;
-end $;
+  exception when insufficient_privilege then null; end;
+end $$;
 
 reset role;
 
