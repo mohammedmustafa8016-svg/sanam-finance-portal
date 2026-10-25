@@ -379,16 +379,15 @@ select set_config('request.jwt.claim.sub',:'bank_id',true);
 select public.seed_permissions_for_user(:'ap_id'::uuid);
 reset role;
 
-do $
-begin
-  if exists(
-    select 1 from public.user_permissions
-    where user_id='00000000-0000-4000-8000-000000000006'::uuid
-      and permission_key='page.audit'
-  ) then
-    raise exception 'PRIVILEGED_RPC_BROKEN: authenticated BankAccountant can seed permissions for another user';
-  end if;
-end $;
+select exists(
+  select 1 from public.user_permissions
+  where user_id='00000000-0000-4000-8000-000000000006'::uuid
+    and permission_key='page.audit'
+)::text privileged_rpc_broken \gset
+
+select 'PRIVILEGED_RPC_TEST' marker,
+       case when :privileged_rpc_broken then 'FAIL' else 'PASS' end result,
+       'BankAccountant calling seed_permissions_for_user(APAccountant)' detail;
 
 -- CFO: team-wide task/work item visibility and audit visibility.
 select set_config('request.jwt.claim.sub',:'cfo_id',true);
@@ -422,5 +421,10 @@ begin
       (select count(*) from security_findings where severity='FAIL');
   end if;
 end $$;
+
+\if :privileged_rpc_broken
+  \echo 'SECURITY_RLS_GATE FAIL: authenticated user can seed another user permissions'
+  \quit 71
+\endif
 
 select 'SECURITY_RLS_GATE' marker,'PASS' result;
