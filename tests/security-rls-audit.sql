@@ -149,6 +149,13 @@ where n.nspname='public'
     has_table_privilege('authenticated',c.oid,'SELECT')
   );
 
+-- S09: internal permission seeding helper must not be callable by ordinary authenticated users.
+insert into security_findings
+select 'FAIL','S09_INTERNAL_PERMISSION_SEED_EXPOSED',
+       'public.seed_permissions_for_user(uuid)',
+       'authenticated can EXECUTE internal cross-user permission seeding helper'
+where has_function_privilege('authenticated','public.seed_permissions_for_user(uuid)','EXECUTE');
+
 -- Advisory findings: UPDATE policies lacking explicit WITH CHECK.
 insert into security_findings
 select 'WARN','W01_UPDATE_POLICY_NO_WITH_CHECK',format('%I.%I/%I',schemaname,tablename,policyname),
@@ -369,26 +376,6 @@ select (count(*)=1)::text ap_payment_visible from public.payments where id=:'sec
   \quit 51
 \endif
 
--- Privileged RPC isolation: ordinary staff must not seed another user's permissions.
-reset role;
-delete from public.user_permissions
-where user_id=:'ap_id'::uuid and permission_key='page.audit';
-
-set local role authenticated;
-select set_config('request.jwt.claim.sub',:'bank_id',true);
-select public.seed_permissions_for_user(:'ap_id'::uuid);
-reset role;
-
-select exists(
-  select 1 from public.user_permissions
-  where user_id='00000000-0000-4000-8000-000000000006'::uuid
-    and permission_key='page.audit'
-)::text privileged_rpc_broken \gset
-
-select 'PRIVILEGED_RPC_TEST' marker,
-       case when :privileged_rpc_broken then 'FAIL' else 'PASS' end result,
-       'BankAccountant calling seed_permissions_for_user(APAccountant)' detail;
-
 -- CFO: team-wide task/work item visibility and audit visibility.
 select set_config('request.jwt.claim.sub',:'cfo_id',true);
 select (count(*)=2)::text cfo_tasks_visible from public.tasks where id in (:'bank_task_id',:'ar_task_id') \gset
@@ -421,10 +408,5 @@ begin
       (select count(*) from security_findings where severity='FAIL');
   end if;
 end $$;
-
-\if :privileged_rpc_broken
-  \echo 'SECURITY_RLS_GATE FAIL: authenticated user can seed another user permissions'
-  \quit 71
-\endif
 
 select 'SECURITY_RLS_GATE' marker,'PASS' result;
