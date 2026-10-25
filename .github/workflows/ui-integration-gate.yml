@@ -93,7 +93,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes supabase@2.121.0 status --env --output-format text > /tmp/supabase.env
+          npx --yes supabase@2.121.0 status -o env > /tmp/supabase.env
           set -a
           source /tmp/supabase.env
           set +a
