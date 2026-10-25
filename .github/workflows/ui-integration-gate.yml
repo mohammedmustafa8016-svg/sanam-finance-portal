@@ -91,50 +91,72 @@ jobs:
 
       - name: Local Auth and role-permission smoke
         shell: bash
+        env:
+          PGPASSWORD: postgres
         run: |
           set -euo pipefail
+
+          # The DB test seed creates synthetic auth rows directly. Complete only the
+          # local GoTrue fields needed for a real password login; no Production data.
+          psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          update auth.users
+          set instance_id='00000000-0000-0000-0000-000000000000'::uuid,
+              aud='authenticated',
+              role='authenticated',
+              encrypted_password=extensions.crypt('UiTest123!',extensions.gen_salt('bf')),
+              email_confirmed_at=coalesce(email_confirmed_at,now()),
+              confirmation_token='',
+              recovery_token='',
+              email_change_token_new=''
+          where id in (
+            '00000000-0000-4000-8000-000000000001'::uuid,
+            '00000000-0000-4000-8000-000000000002'::uuid,
+            '00000000-0000-4000-8000-000000000003'::uuid,
+            '00000000-0000-4000-8000-000000000004'::uuid,
+            '00000000-0000-4000-8000-000000000005'::uuid,
+            '00000000-0000-4000-8000-000000000006'::uuid
+          );
+          SQL
+
           npx --yes supabase@2.121.0 status -o env > /tmp/supabase.env
           set -a
           source /tmp/supabase.env
           set +a
           test -n "$API_URL"
           test -n "$ANON_KEY"
-          test -n "$SERVICE_ROLE_KEY"
 
           PASSWORD='UiTest123!'
-          ids=(
-            00000000-0000-4000-8000-000000000001
-            00000000-0000-4000-8000-000000000002
-            00000000-0000-4000-8000-000000000003
-            00000000-0000-4000-8000-000000000004
-            00000000-0000-4000-8000-000000000005
-            00000000-0000-4000-8000-000000000006
-          )
-          for id in "${ids[@]}"; do
-            curl --fail-with-body -sS -X PUT "$API_URL/auth/v1/admin/users/$id"               -H "apikey: $SERVICE_ROLE_KEY"               -H "Authorization: Bearer $SERVICE_ROLE_KEY"               -H "Content-Type: application/json"               -d "{"password":"$PASSWORD","email_confirm":true}" >/dev/null
-          done
-
           login() {
             local email="$1"
-            curl --fail-with-body -sS -X POST "$API_URL/auth/v1/token?grant_type=password"               -H "apikey: $ANON_KEY"               -H "Content-Type: application/json"               -d "{"email":"$email","password":"$PASSWORD"}"
+            local body
+            body=$(jq -nc --arg email "$email" --arg password "$PASSWORD" '{email:$email,password:$password}')
+            curl --fail-with-body -sS -X POST "$API_URL/auth/v1/token?grant_type=password" \
+              -H "apikey: $ANON_KEY" \
+              -H "Content-Type: application/json" \
+              -d "$body"
           }
           perms() {
             local token="$1"
-            curl --fail-with-body -sS -X POST "$API_URL/rest/v1/rpc/get_my_permissions"               -H "apikey: $ANON_KEY"               -H "Authorization: Bearer $token"               -H "Content-Type: application/json"               -d '{}'
+            curl --fail-with-body -sS -X POST "$API_URL/rest/v1/rpc/get_my_permissions" \
+              -H "apikey: $ANON_KEY" \
+              -H "Authorization: Bearer $token" \
+              -H "Content-Type: application/json" \
+              -d '{}'
           }
 
-          if curl -fsS -X POST "$API_URL/auth/v1/token?grant_type=password" -H "apikey: $ANON_KEY" -H "Content-Type: application/json" -d '{"email":"cfo@local.invalid","password":"Wrong123!"}' >/dev/null 2>&1; then
+          BAD_BODY=$(jq -nc --arg email "cfo@local.invalid" --arg password "Wrong123!" '{email:$email,password:$password}')
+          if curl -fsS -X POST "$API_URL/auth/v1/token?grant_type=password" \
+               -H "apikey: $ANON_KEY" -H "Content-Type: application/json" -d "$BAD_BODY" >/dev/null 2>&1; then
             echo "Invalid password unexpectedly authenticated."
             exit 1
           fi
 
-          CFO_TOKEN=$(login cfo@local.invalid | jq -r .access_token)
-          SUP_TOKEN=$(login supervisor@local.invalid | jq -r .access_token)
-          BANK_TOKEN=$(login bank.accountant@local.invalid | jq -r .access_token)
-          GL_TOKEN=$(login gl.accountant@local.invalid | jq -r .access_token)
-          AR_TOKEN=$(login ar.accountant@local.invalid | jq -r .access_token)
-          AP_TOKEN=$(login ap.accountant@local.invalid | jq -r .access_token)
-          for token in "$CFO_TOKEN" "$SUP_TOKEN" "$BANK_TOKEN" "$GL_TOKEN" "$AR_TOKEN" "$AP_TOKEN"; do test "$token" != "null" -a -n "$token"; done
+          CFO_TOKEN=$(login cfo@local.invalid | jq -er .access_token)
+          SUP_TOKEN=$(login supervisor@local.invalid | jq -er .access_token)
+          BANK_TOKEN=$(login bank.accountant@local.invalid | jq -er .access_token)
+          GL_TOKEN=$(login gl.accountant@local.invalid | jq -er .access_token)
+          AR_TOKEN=$(login ar.accountant@local.invalid | jq -er .access_token)
+          AP_TOKEN=$(login ap.accountant@local.invalid | jq -er .access_token)
 
           CFO_PERMS=$(perms "$CFO_TOKEN")
           SUP_PERMS=$(perms "$SUP_TOKEN")
