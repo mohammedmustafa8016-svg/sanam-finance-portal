@@ -277,22 +277,22 @@ begin
   exception when insufficient_privilege then null; end;
 
   begin
-    select count(*) into n from public.tasks where id in (:'bank_task_id'::uuid,:'ar_task_id'::uuid);
+    select count(*) into n from public.tasks where name in ('SEC_RLS_BANK_TASK','SEC_RLS_AR_TASK');
     if n<>0 then raise exception 'ANON_TASKS_VISIBLE:%',n; end if;
   exception when insufficient_privilege then null; end;
 
   begin
-    select count(*) into n from public.work_items where id in (:'bank_work_item_id'::uuid,:'ar_work_item_id'::uuid);
+    select count(*) into n from public.work_items where title in ('SEC_RLS_BANK_TASK','SEC_RLS_AR_TASK');
     if n<>0 then raise exception 'ANON_WORK_ITEMS_VISIBLE:%',n; end if;
   exception when insufficient_privilege then null; end;
 
   begin
-    select count(*) into n from public.payments where id=:'security_payment_id'::uuid;
+    select count(*) into n from public.payments where purpose='RLS TEST' and company='LOCAL SECURITY TEST';
     if n<>0 then raise exception 'ANON_PAYMENT_VISIBLE:%',n; end if;
   exception when insufficient_privilege then null; end;
 
   begin
-    select count(*) into n from public.bank_accounts where id=:'security_bank_account_id'::uuid;
+    select count(*) into n from public.bank_accounts where company='LOCAL SECURITY TEST' and bank_name='LOCAL BANK';
     if n<>0 then raise exception 'ANON_BANK_VISIBLE:%',n; end if;
   exception when insufficient_privilege then null; end;
 
