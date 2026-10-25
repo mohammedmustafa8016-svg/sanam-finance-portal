@@ -369,6 +369,27 @@ select (count(*)=1)::text ap_payment_visible from public.payments where id=:'sec
   \quit 51
 \endif
 
+-- Privileged RPC isolation: ordinary staff must not seed another user's permissions.
+reset role;
+delete from public.user_permissions
+where user_id=:'ap_id'::uuid and permission_key='page.audit';
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub',:'bank_id',true);
+select public.seed_permissions_for_user(:'ap_id'::uuid);
+reset role;
+
+do $
+begin
+  if exists(
+    select 1 from public.user_permissions
+    where user_id='00000000-0000-4000-8000-000000000006'::uuid
+      and permission_key='page.audit'
+  ) then
+    raise exception 'PRIVILEGED_RPC_BROKEN: authenticated BankAccountant can seed permissions for another user';
+  end if;
+end $;
+
 -- CFO: team-wide task/work item visibility and audit visibility.
 select set_config('request.jwt.claim.sub',:'cfo_id',true);
 select (count(*)=2)::text cfo_tasks_visible from public.tasks where id in (:'bank_task_id',:'ar_task_id') \gset
