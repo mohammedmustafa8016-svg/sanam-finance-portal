@@ -27,7 +27,9 @@ const emails={CFO:'cfo@local.invalid',Supervisor:'supervisor@local.invalid',Bank
  const visibleNav=()=>page.locator('.nav:not(.hidden)').evaluateAll(xs=>xs.filter(x=>getComputedStyle(x).display!=='none').map(x=>x.dataset.page).sort());
  async function login(role){
   await page.locator('#loginEmail').fill(emails[role]);await page.locator('#loginPassword').fill('UiTest123!');await page.locator('#loginBtn').click();
-  await page.waitForFunction(r=>window.profile?.role===r&&!document.getElementById('app').classList.contains('hidden'),role);
+  await page.waitForSelector('#app:not(.hidden)');
+  await page.waitForFunction(r=>typeof profile!=='undefined'&&profile?.role===r,role);
+  assert.equal(await page.evaluate(()=>profile.role),role,role+' profile role');
   assert.deepEqual(await visibleNav(),expected[role],role+' navigation');
   assert.match(await page.textContent('#userRole'),role==='Viewer'?/مطلع تجريبي/:/.+/);
  }
