@@ -25,6 +25,7 @@ const emails={CFO:'cfo@local.invalid',Supervisor:'supervisor@local.invalid',Bank
  await page.locator('#loginEmail').fill('unknown@local.invalid');await page.locator('#loginPassword').fill('UiTest123!');await page.locator('#loginBtn').click();await page.waitForFunction(()=>document.getElementById('loginMsg').textContent.includes('تعذر تسجيل الدخول'));assert.match(await page.textContent('#loginMsg'),/تحقق من البريد وكلمة المرور/);
 
  const visibleNav=()=>page.locator('.nav:not(.hidden)').evaluateAll(xs=>xs.filter(x=>getComputedStyle(x).display!=='none').map(x=>x.dataset.page).sort());
+ const accessHidden=sel=>page.locator(sel).evaluate(el=>el.classList.contains('hidden'));
  async function login(role){
   await page.locator('#loginEmail').fill(emails[role]);await page.locator('#loginPassword').fill('UiTest123!');await page.locator('#loginBtn').click();
   await page.waitForSelector('#app:not(.hidden)');
@@ -36,20 +37,20 @@ const emails={CFO:'cfo@local.invalid',Supervisor:'supervisor@local.invalid',Bank
  async function logout(){await page.locator('#logoutBtn').click();await page.waitForSelector('#authScreen:not(.hidden)');}
 
  await login('CFO');
- await page.waitForSelector('#wcRows');assert.equal(await page.locator('#wcScopeWrap').isVisible(),true);assert.equal(await page.locator('#wcAddTaskBtn').isVisible(),true);assert.equal(await page.locator('#addExceptionBtn').isVisible(),true);
+ await page.waitForSelector('#wcRows');assert.equal(await page.locator('#wcScopeWrap').isVisible(),true,'CFO team scope');assert.equal(await page.locator('#wcAddTaskBtn').isVisible(),true,'CFO Work Center add task');assert.equal(await accessHidden('#addExceptionBtn'),false,'CFO exception action access');
  // Work Center service failure and recovery.
  await page.evaluate(async()=>{window.fixtureWorkCenterError=true;await loadWorkCenter()});assert.equal(await page.locator('#wcError').isVisible(),true);assert.match(await page.textContent('#wcError'),/تعذر تحميل مركز العمل/);
  await page.evaluate(async()=>{window.fixtureWorkCenterError=false;await loadWorkCenter()});assert.equal(await page.locator('#wcError').isVisible(),false);
  await logout();
 
- await login('Supervisor');await page.waitForSelector('#wcRows');assert.equal(await page.locator('#wcScopeWrap').isVisible(),true);assert.equal(await page.locator('#wcAddTaskBtn').isVisible(),true);assert.equal(await page.locator('#addExceptionBtn').isVisible(),false);await logout();
+ await login('Supervisor');await page.waitForSelector('#wcRows');assert.equal(await page.locator('#wcScopeWrap').isVisible(),true,'Supervisor team scope');assert.equal(await page.locator('#wcAddTaskBtn').isVisible(),true,'Supervisor Work Center add task');assert.equal(await accessHidden('#addExceptionBtn'),true,'Supervisor exception create denied');await logout();
 
- await login('BankAccountant');await page.waitForSelector('#wcRows');assert.equal(await page.locator('#wcScopeWrap').isVisible(),false);assert.equal(await page.locator('#wcAddTaskBtn').isVisible(),false);assert.equal(await page.locator('#addBankBtn').isVisible(),true);assert.equal(await page.locator('#addPaymentBtn').isVisible(),true);
+ await login('BankAccountant');await page.waitForSelector('#wcRows');assert.equal(await page.locator('#wcScopeWrap').isVisible(),false,'Bank team scope denied');assert.equal(await page.locator('#wcAddTaskBtn').isVisible(),false,'Bank task assignment denied');assert.equal(await accessHidden('#addBankBtn'),false,'Bank account action access');assert.equal(await accessHidden('#addPaymentBtn'),false,'Bank payment action access');
  const activeBefore=await page.locator('.section.active').getAttribute('id');await page.evaluate(()=>openPage('audit','Audit'));assert.equal(await page.locator('.section.active').getAttribute('id'),activeBefore,'Unauthorized direct page open must be blocked');await logout();
 
- await login('GLAccountant');await page.waitForSelector('#wcRows');assert.equal(await page.locator('#addPaymentBtn').isVisible(),false);assert.equal(await page.locator('#addBankBtn').isVisible(),false);await logout();
- await login('ARAccountant');await page.waitForSelector('#wcRows');assert.equal(await page.locator('#addPaymentBtn').isVisible(),false);assert.equal(await page.locator('#addImprestBtn').isVisible(),false);await logout();
- await login('APAccountant');await page.waitForSelector('#wcRows');assert.equal(await page.locator('#addPaymentBtn').isVisible(),true);assert.equal(await page.locator('#addImprestBtn').isVisible(),true);assert.equal(await page.locator('#addBankBtn').isVisible(),false);await logout();
+ await login('GLAccountant');await page.waitForSelector('#wcRows');assert.equal(await accessHidden('#addPaymentBtn'),true,'GL payment create denied');assert.equal(await accessHidden('#addBankBtn'),true,'GL bank manage denied');await logout();
+ await login('ARAccountant');await page.waitForSelector('#wcRows');assert.equal(await accessHidden('#addPaymentBtn'),true,'AR payment create denied');assert.equal(await accessHidden('#addImprestBtn'),true,'AR imprest create denied');await logout();
+ await login('APAccountant');await page.waitForSelector('#wcRows');assert.equal(await accessHidden('#addPaymentBtn'),false,'AP payment create access');assert.equal(await accessHidden('#addImprestBtn'),false,'AP imprest create access');assert.equal(await accessHidden('#addBankBtn'),true,'AP bank manage denied');await logout();
 
  await login('Viewer');assert.equal(await page.locator('#headerNotificationsBtn').isVisible(),false);assert.equal(await page.locator('#readonlyDashboardFilters').isVisible(),true);assert.equal(await page.locator('#workcenter').isVisible(),false);await logout();
 
