@@ -96,26 +96,18 @@ jobs:
         run: |
           set -euo pipefail
 
-          # The DB test seed creates synthetic auth rows directly. Complete only the
-          # local GoTrue fields needed for a real password login; no Production data.
+          # Add a second, UI-only allowlist set. These accounts are created through
+          # GoTrue itself, so password authentication exercises the real local Auth path.
           psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
-          update auth.users
-          set instance_id='00000000-0000-0000-0000-000000000000'::uuid,
-              aud='authenticated',
-              role='authenticated',
-              encrypted_password=extensions.crypt('UiTest123!',extensions.gen_salt('bf')),
-              email_confirmed_at=coalesce(email_confirmed_at,now()),
-              confirmation_token='',
-              recovery_token='',
-              email_change_token_new=''
-          where id in (
-            '00000000-0000-4000-8000-000000000001'::uuid,
-            '00000000-0000-4000-8000-000000000002'::uuid,
-            '00000000-0000-4000-8000-000000000003'::uuid,
-            '00000000-0000-4000-8000-000000000004'::uuid,
-            '00000000-0000-4000-8000-000000000005'::uuid,
-            '00000000-0000-4000-8000-000000000006'::uuid
-          );
+          insert into public.allowed_users(email,full_name,role,active) values
+            ('ui.cfo@local.invalid','UI CFO','CFO',true),
+            ('ui.supervisor@local.invalid','UI Supervisor','Supervisor',true),
+            ('ui.bank@local.invalid','UI Bank','BankAccountant',true),
+            ('ui.gl@local.invalid','UI GL','GLAccountant',true),
+            ('ui.ar@local.invalid','UI AR','ARAccountant',true),
+            ('ui.ap@local.invalid','UI AP','APAccountant',true)
+          on conflict(email) do update
+          set full_name=excluded.full_name,role=excluded.role,active=true;
           SQL
 
           npx --yes supabase@2.121.0 status -o env > /tmp/supabase.env
@@ -126,6 +118,15 @@ jobs:
           test -n "$ANON_KEY"
 
           PASSWORD='UiTest123!'
+          signup() {
+            local email="$1"
+            local body
+            body=$(jq -nc --arg email "$email" --arg password "$PASSWORD" '{email:$email,password:$password}')
+            curl --fail-with-body -sS -X POST "$API_URL/auth/v1/signup" \
+              -H "apikey: $ANON_KEY" \
+              -H "Content-Type: application/json" \
+              -d "$body"
+          }
           login() {
             local email="$1"
             local body
@@ -144,19 +145,34 @@ jobs:
               -d '{}'
           }
 
-          BAD_BODY=$(jq -nc --arg email "cfo@local.invalid" --arg password "Wrong123!" '{email:$email,password:$password}')
-          if curl -fsS -X POST "$API_URL/auth/v1/token?grant_type=password" \
-               -H "apikey: $ANON_KEY" -H "Content-Type: application/json" -d "$BAD_BODY" >/dev/null 2>&1; then
+          for email in ui.cfo@local.invalid ui.supervisor@local.invalid ui.bank@local.invalid ui.gl@local.invalid ui.ar@local.invalid ui.ap@local.invalid; do
+            signup "$email" >/dev/null
+          done
+
+          # If local email confirmation is enabled, confirm only these disposable UI accounts.
+          psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          update auth.users set email_confirmed_at=coalesce(email_confirmed_at,now())
+          where email like 'ui.%@local.invalid';
+          SQL
+
+          ROGUE_BODY=$(jq -nc --arg email "rogue@local.invalid" --arg password "$PASSWORD" '{email:$email,password:$password}')
+          if curl -fsS -X POST "$API_URL/auth/v1/signup" -H "apikey: $ANON_KEY" -H "Content-Type: application/json" -d "$ROGUE_BODY" >/dev/null 2>&1; then
+            echo "Non-allowlisted signup unexpectedly succeeded."
+            exit 1
+          fi
+
+          BAD_BODY=$(jq -nc --arg email "ui.cfo@local.invalid" --arg password "Wrong123!" '{email:$email,password:$password}')
+          if curl -fsS -X POST "$API_URL/auth/v1/token?grant_type=password" -H "apikey: $ANON_KEY" -H "Content-Type: application/json" -d "$BAD_BODY" >/dev/null 2>&1; then
             echo "Invalid password unexpectedly authenticated."
             exit 1
           fi
 
-          CFO_TOKEN=$(login cfo@local.invalid | jq -er .access_token)
-          SUP_TOKEN=$(login supervisor@local.invalid | jq -er .access_token)
-          BANK_TOKEN=$(login bank.accountant@local.invalid | jq -er .access_token)
-          GL_TOKEN=$(login gl.accountant@local.invalid | jq -er .access_token)
-          AR_TOKEN=$(login ar.accountant@local.invalid | jq -er .access_token)
-          AP_TOKEN=$(login ap.accountant@local.invalid | jq -er .access_token)
+          CFO_TOKEN=$(login ui.cfo@local.invalid | jq -er .access_token)
+          SUP_TOKEN=$(login ui.supervisor@local.invalid | jq -er .access_token)
+          BANK_TOKEN=$(login ui.bank@local.invalid | jq -er .access_token)
+          GL_TOKEN=$(login ui.gl@local.invalid | jq -er .access_token)
+          AR_TOKEN=$(login ui.ar@local.invalid | jq -er .access_token)
+          AP_TOKEN=$(login ui.ap@local.invalid | jq -er .access_token)
 
           CFO_PERMS=$(perms "$CFO_TOKEN")
           SUP_PERMS=$(perms "$SUP_TOKEN")
@@ -171,7 +187,7 @@ jobs:
           echo "$GL_PERMS" | jq -e 'any(.[]; .permission_key=="data.bank_balances" and .allowed==false)' >/dev/null
           echo "$AR_PERMS" | jq -e 'any(.[]; .permission_key=="page.performance" and .allowed==true)' >/dev/null
           echo "$AP_PERMS" | jq -e 'any(.[]; .permission_key=="page.imprest" and .allowed==true)' >/dev/null
-          echo "PASS: real local password login for 6 finance roles; invalid password denied; permission RPC role checks passed."
+          echo "PASS: real local signup/login for 6 finance roles; non-allowlisted signup and invalid password denied; role permissions passed."
 
       - name: Install pinned browser test runtime
         shell: bash
