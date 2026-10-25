@@ -1,0 +1,204 @@
+name: UI Integration Gate
+
+on:
+  push:
+    branches:
+      - integration-workcenter-v5-rebuild
+    paths:
+      - "index.html"
+      - "workcenter-v5.js"
+      - "workcenter-v5.css"
+      - "portal-theme.css"
+      - "tests/ui-auth-role-client.js"
+      - "tests/ui-auth-role-browser.cjs"
+      - "tests/serve-auth-preview.cjs"
+      - "tests/workcenter-v5-browser.cjs"
+      - "tests/portal-experience-browser.cjs"
+      - "tests/fixture-client.js"
+      - "supabase/**"
+      - ".github/workflows/ui-integration-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ui-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout integration branch
+        uses: actions/checkout@v5
+
+      - name: Production isolation guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROD_REF="xpomwrpgxnjx""abjnwnuz"
+          if grep -R -F "$PROD_REF" supabase/config.toml supabase/seed.sql tests/ui-auth-role-client.js tests/ui-auth-role-browser.cjs tests/serve-auth-preview.cjs; then
+            echo "Production project reference detected in UI integration test inputs."
+            exit 1
+          fi
+          if [ -n "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "Remote Supabase access token must not be present."
+            exit 1
+          fi
+          if [ -e "supabase/.temp/project-ref" ]; then
+            echo "Linked remote project state detected."
+            exit 1
+          fi
+
+      - name: Pin Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 --version
+          npx --yes supabase@2.121.0 status --help >/tmp/supabase-status-help.txt
+
+      - name: Start isolated local Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 start
+
+      - name: Rebuild all 72 migrations locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 db reset --local
+
+      - name: Apply integration patches locally
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/patches/workcenter_v5_set_based_actions.sql
+          psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/patches/security_revoke_internal_permission_seed.sql
+
+      - name: Work Center backend regression
+        shell: bash
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          begin;
+          \i tests/workcenter-v5.sql
+          rollback;
+          SQL
+
+      - name: Local Auth and role-permission smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 status --env --output-format text > /tmp/supabase.env
+          set -a
+          source /tmp/supabase.env
+          set +a
+          test -n "$API_URL"
+          test -n "$ANON_KEY"
+          test -n "$SERVICE_ROLE_KEY"
+
+          PASSWORD='UiTest123!'
+          ids=(
+            00000000-0000-4000-8000-000000000001
+            00000000-0000-4000-8000-000000000002
+            00000000-0000-4000-8000-000000000003
+            00000000-0000-4000-8000-000000000004
+            00000000-0000-4000-8000-000000000005
+            00000000-0000-4000-8000-000000000006
+          )
+          for id in "${ids[@]}"; do
+            curl --fail-with-body -sS -X PUT "$API_URL/auth/v1/admin/users/$id"               -H "apikey: $SERVICE_ROLE_KEY"               -H "Authorization: Bearer $SERVICE_ROLE_KEY"               -H "Content-Type: application/json"               -d "{"password":"$PASSWORD","email_confirm":true}" >/dev/null
+          done
+
+          login() {
+            local email="$1"
+            curl --fail-with-body -sS -X POST "$API_URL/auth/v1/token?grant_type=password"               -H "apikey: $ANON_KEY"               -H "Content-Type: application/json"               -d "{"email":"$email","password":"$PASSWORD"}"
+          }
+          perms() {
+            local token="$1"
+            curl --fail-with-body -sS -X POST "$API_URL/rest/v1/rpc/get_my_permissions"               -H "apikey: $ANON_KEY"               -H "Authorization: Bearer $token"               -H "Content-Type: application/json"               -d '{}'
+          }
+
+          if curl -fsS -X POST "$API_URL/auth/v1/token?grant_type=password" -H "apikey: $ANON_KEY" -H "Content-Type: application/json" -d '{"email":"cfo@local.invalid","password":"Wrong123!"}' >/dev/null 2>&1; then
+            echo "Invalid password unexpectedly authenticated."
+            exit 1
+          fi
+
+          CFO_TOKEN=$(login cfo@local.invalid | jq -r .access_token)
+          SUP_TOKEN=$(login supervisor@local.invalid | jq -r .access_token)
+          BANK_TOKEN=$(login bank.accountant@local.invalid | jq -r .access_token)
+          GL_TOKEN=$(login gl.accountant@local.invalid | jq -r .access_token)
+          AR_TOKEN=$(login ar.accountant@local.invalid | jq -r .access_token)
+          AP_TOKEN=$(login ap.accountant@local.invalid | jq -r .access_token)
+          for token in "$CFO_TOKEN" "$SUP_TOKEN" "$BANK_TOKEN" "$GL_TOKEN" "$AR_TOKEN" "$AP_TOKEN"; do test "$token" != "null" -a -n "$token"; done
+
+          CFO_PERMS=$(perms "$CFO_TOKEN")
+          SUP_PERMS=$(perms "$SUP_TOKEN")
+          BANK_PERMS=$(perms "$BANK_TOKEN")
+          GL_PERMS=$(perms "$GL_TOKEN")
+          AR_PERMS=$(perms "$AR_TOKEN")
+          AP_PERMS=$(perms "$AP_TOKEN")
+
+          echo "$CFO_PERMS" | jq -e 'any(.[]; .permission_key=="page.audit" and .allowed==true) and any(.[]; .permission_key=="page.permissions" and .allowed==true)' >/dev/null
+          echo "$SUP_PERMS" | jq -e 'any(.[]; .permission_key=="page.audit" and .allowed==false) and any(.[]; .permission_key=="page.permissions" and .allowed==false)' >/dev/null
+          echo "$BANK_PERMS" | jq -e 'any(.[]; .permission_key=="data.bank_balances" and .allowed==true) and any(.[]; .permission_key=="page.audit" and .allowed==false)' >/dev/null
+          echo "$GL_PERMS" | jq -e 'any(.[]; .permission_key=="data.bank_balances" and .allowed==false)' >/dev/null
+          echo "$AR_PERMS" | jq -e 'any(.[]; .permission_key=="page.performance" and .allowed==true)' >/dev/null
+          echo "$AP_PERMS" | jq -e 'any(.[]; .permission_key=="page.imprest" and .allowed==true)' >/dev/null
+          echo "PASS: real local password login for 6 finance roles; invalid password denied; permission RPC role checks passed."
+
+      - name: Install pinned browser test runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright@1.55.0 install --with-deps chromium
+          node -e "console.log(require('playwright').chromium.executablePath())"
+
+      - name: Browser login and role-access tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PLAYWRIGHT_PATH=playwright
+          export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          node tests/serve-auth-preview.cjs >/tmp/auth-preview.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4174 >/dev/null && break; sleep 1; done
+          node tests/ui-auth-role-browser.cjs
+          kill $SERVER_PID
+          wait $SERVER_PID 2>/dev/null || true
+          trap - EXIT
+
+      - name: Browser Work Center and error-path regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PLAYWRIGHT_PATH=playwright
+          export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          node tests/serve-preview.cjs >/tmp/fixture-preview.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4173 >/dev/null && break; sleep 1; done
+          node tests/workcenter-v5-browser.cjs
+          node tests/portal-experience-browser.cjs
+          kill $SERVER_PID
+          wait $SERVER_PID 2>/dev/null || true
+          trap - EXIT
+
+      - name: Verify migration history remains 72
+        shell: bash
+        run: |
+          set -euo pipefail
+          COUNT=$(npx --yes supabase@2.121.0 migration list --local | grep -E '^[[:space:]]*[0-9]{14}[[:space:]]+\|' | wc -l)
+          echo "Local migration count: $COUNT"
+          test "$COUNT" -eq 72
+
+      - name: Stop disposable local stack
+        if: always()
+        shell: bash
+        run: npx --yes supabase@2.121.0 stop --no-backup || true
