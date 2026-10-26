@@ -19,7 +19,7 @@ const lifecycle = {name:'create-start-submit-review-delete-preserve-other-task',
 async function localRows(table, query) {
   const response=await fetch(api+'/rest/v1/'+table+'?'+query,
     {headers:{apikey:service,Authorization:'Bearer '+service}});
-  assert.ok(response.ok, 'Local database assertion: '+table+' '+response.status());
+  assert.ok(response.ok, 'Local database assertion: '+table+' '+response.status);
   return response.json();
 }
 
