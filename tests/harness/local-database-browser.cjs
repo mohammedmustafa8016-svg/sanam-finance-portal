@@ -125,7 +125,7 @@ async function runLifecycle(browser) {
 
     await refresh(cfo,'completed');
     await row(cfo).locator('.wc-title-link').click();
-    await cfo.locator('[data-cfo-delete-task="'+taskId+'"]').click();
+    await cfo.locator('#wcDetailShell [data-cfo-delete-task="'+taskId+'"]').click();
     await cfo.locator('#deleteTaskConfirmation').fill(title);
     await cfo.locator('#deleteTaskReason').fill('Delete disposable local regression fixture only');
     await clickRpc(cfo,'delete_finance_task_cfo_v7',()=>cfo.locator('#confirmDeleteTaskBtn').click());

@@ -65,8 +65,17 @@ external browser requests are blocked. Application source files are unchanged;
 only the local HTTP response substitutes the Supabase URL/key and locally
 installed browser client.
 
-This is a bounded regression gate, not an exhaustive security audit or a
-complete populated-database browser workflow test.
+The integration test also enables the optional workflow engines through local
+CFO APIs, creates two synthetic tasks through the UI, starts/submits the target
+as BankAccountant, approves it as Supervisor with score 94, and deletes it as
+CFO. It checks persisted states, target cleanup, retained audit history and
+that every field of the unrelated existing task remains unchanged. Local
+Auth setup and assertion reads use loopback service credentials; task lifecycle
+mutations use browser interactions and ordinary authenticated sessions.
+
+This is a bounded regression gate, not an exhaustive security audit or coverage
+of every populated-database business workflow. Review and live-upgrade
+reconciliation are described in `docs/data-preserving-integration-plan.md`.
 
 Each job uploads `local-gate-evidence-current` or `local-gate-evidence-baseline`
 with migration manifests, reset logs, per-test logs, `results.json`,
