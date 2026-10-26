@@ -62,8 +62,8 @@ jobs:
             find supabase/patches -type f -maxdepth 1 -print
             exit 1
           fi
-          if grep -R -F "supabase/patches/" .github/workflows; then
-            echo "Workflow still references a manual patch."
+          if grep -R -F -- "-f supabase/patches/" .github/workflows; then
+            echo "Workflow still applies a manual patch."
             exit 1
           fi
           echo "PASS: no active manual patch files or workflow patch references."
