@@ -45,9 +45,12 @@ jobs:
           supabase status --help >/dev/null
           sha256sum supabase/migrations/*.sql > migration-manifest.txt
       - name: Install pinned browser harness
+        timeout-minutes: 5
         run: |
           npm ci --prefix tests/harness --ignore-scripts --no-audit --no-fund
-          tests/harness/node_modules/.bin/playwright install --with-deps chromium
+          # Hosted Ubuntu runners already supply Chrome's shared libraries.
+          # Keep Playwright's pinned Chromium, without an unbounded apt update.
+          tests/harness/node_modules/.bin/playwright install chromium
       - name: Start disposable local Supabase
         run: supabase start
       - name: Rebuild from migrations only without seed
