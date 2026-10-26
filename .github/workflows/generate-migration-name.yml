@@ -1,0 +1,23 @@
+name: Generate Migration Name
+
+on:
+  push:
+    branches:
+      - integration-workcenter-v5-rebuild
+    paths:
+      - ".github/workflows/generate-migration-name.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Generate migration filename with Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes supabase@2.121.0 migration new revoke_internal_permission_seed
+          find supabase/migrations -maxdepth 1 -type f -name '*_revoke_internal_permission_seed.sql' -print
