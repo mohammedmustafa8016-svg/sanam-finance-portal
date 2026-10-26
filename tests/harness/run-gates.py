@@ -134,6 +134,7 @@ end $$;
 # conditions explicitly required by their comments, within the same rollback.
 for path in sorted((ROOT / 'tests').glob('*.sql')):
     setup = (ROOT / 'tests/harness/fixtures.sql').read_text()
+    setup += '\n' + (ROOT / 'tests/harness/workflow-fixtures.sql').read_text()
     if path.name in ('workcenter-v5.sql', 'workcenter-v5-plan.sql', 'workcenter-v5-payment-cycle.sql'):
         setup += '\nupdate private.workcenter_cycles set active=false;\n'
     if path.name == 'workcenter-v5.sql':
