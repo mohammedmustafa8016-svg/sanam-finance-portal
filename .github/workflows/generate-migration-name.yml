@@ -19,5 +19,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes supabase@2.121.0 migration new revoke_internal_permission_seed
-          find supabase/migrations -maxdepth 1 -type f -name '*_revoke_internal_permission_seed.sql' -print
+          npx --yes supabase@2.121.0 migration new workcenter_v5_set_based_actions
+          find supabase/migrations -maxdepth 1 -type f -name '*_workcenter_v5_set_based_actions.sql' -print
