@@ -54,20 +54,11 @@ jobs:
           set -euo pipefail
           npx --yes supabase@2.121.0 start
 
-      - name: Rebuild all 72 migrations locally
+      - name: Rebuild all 74 migrations locally
         shell: bash
         run: |
           set -euo pipefail
           npx --yes supabase@2.121.0 db reset --local
-
-      - name: Apply development-only Work Center patch locally
-        shell: bash
-        env:
-          PGPASSWORD: postgres
-        run: |
-          set -euo pipefail
-          psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 \
-            -f supabase/patches/workcenter_v5_set_based_actions.sql
 
       - name: Run Work Center functional regression
         shell: bash
@@ -90,7 +81,7 @@ jobs:
           psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 \
             -f tests/workcenter-v5-performance.sql
 
-      - name: Verify local migration history remains 72
+      - name: Verify local migration history remains 74
         shell: bash
         run: |
           set -euo pipefail
