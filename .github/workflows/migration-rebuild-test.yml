@@ -62,7 +62,8 @@ jobs:
             find supabase/patches -type f -maxdepth 1 -print
             exit 1
           fi
-          if grep -R -F -- "-f supabase/patches/" .github/workflows; then
+          PATCH_APPLY_NEEDLE="-f supabase""/patches/"
+          if grep -R -F -- "$PATCH_APPLY_NEEDLE" .github/workflows; then
             echo "Workflow still applies a manual patch."
             exit 1
           fi
