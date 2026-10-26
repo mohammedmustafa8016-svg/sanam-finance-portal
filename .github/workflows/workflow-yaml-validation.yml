@@ -1,0 +1,21 @@
+name: Validate workflow YAML safely
+on:
+  push:
+    branches: [fix-legacy-workflow-yaml-20261026, fix-seed-permissions-migration-20261026, migration-parity-rebuild]
+    paths: ['.github/workflows/**', 'scripts/validate-workflows.py']
+  pull_request:
+    paths: ['.github/workflows/**', 'scripts/validate-workflows.py']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parse YAML and compile embedded Python without executing patchers
+        run: |
+          python -m pip install PyYAML==6.0.3
+          python scripts/validate-workflows.py

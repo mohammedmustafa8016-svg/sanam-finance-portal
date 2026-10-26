@@ -1,0 +1,106 @@
+name: Verify Supabase Clean Rebuild
+
+on:
+  push:
+    branches:
+      - fix-seed-permissions-migration-20261026
+    paths:
+      - 'supabase/migrations/**'
+      - '.github/workflows/verify-supabase-clean-rebuild.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clean-rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Initialize local Supabase config
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f supabase/config.toml ]; then
+            supabase init
+          fi
+          supabase --version
+          supabase db --help
+
+      - name: Start clean local stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase start
+
+      - name: Rebuild database from migrations only
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db reset --local --no-seed
+
+      - name: Verify migration and function
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_CONTAINER="$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -n 1)"
+          test -n "$DB_CONTAINER"
+
+          docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare
+            v_oid oid;
+            v_count integer;
+          begin
+            select to_regprocedure('public.seed_permissions_for_user(uuid)')::oid into v_oid;
+            if v_oid is null then
+              raise exception 'seed_permissions_for_user(uuid) was not created by migrations';
+            end if;
+
+            if not exists (
+              select 1
+              from pg_proc p
+              join pg_namespace n on n.oid = p.pronamespace
+              where p.oid = v_oid
+                and p.prosecdef
+                and p.proconfig @> array['search_path=public, private, pg_temp']::text[]
+            ) then
+              raise exception 'seed_permissions_for_user security/search_path mismatch';
+            end if;
+
+            if has_function_privilege('anon', v_oid, 'EXECUTE') then
+              raise exception 'anon must not execute seed_permissions_for_user';
+            end if;
+
+            if not has_function_privilege('authenticated', v_oid, 'EXECUTE') then
+              raise exception 'authenticated must execute seed_permissions_for_user';
+            end if;
+
+            if not has_function_privilege('service_role', v_oid, 'EXECUTE') then
+              raise exception 'service_role must execute seed_permissions_for_user';
+            end if;
+
+            if to_regprocedure('private.default_permission_for_role(text,text)') is null then
+              raise exception 'default_permission_for_role dependency missing';
+            end if;
+
+            if to_regclass('public.profiles') is null
+               or to_regclass('public.user_permissions') is null then
+              raise exception 'seed_permissions_for_user table dependency missing';
+            end if;
+
+            select count(*) into v_count
+            from supabase_migrations.schema_migrations;
+
+            if v_count <> 73 then
+              raise exception 'expected 73 applied project migrations after clean rebuild, found %', v_count;
+            end if;
+          end
+          $$;
+          SQL

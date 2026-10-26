@@ -1,0 +1,9 @@
+{
+  "name": "sanam-local-regression-harness",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@supabase/supabase-js": "2.76.1",
+    "playwright": "1.56.1"
+  }
+}
