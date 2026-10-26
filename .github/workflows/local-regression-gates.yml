@@ -2,8 +2,8 @@ name: Local Security RLS and UI gates
 
 on:
   push:
-    branches: [fix-seed-permissions-migration-20261026]
-    paths: ['tests/harness/**', '.github/workflows/local-regression-gates.yml']
+    branches: [fix-seed-permissions-migration-20261026, migration-parity-rebuild]
+    paths: ['tests/**', 'supabase/**', '.github/workflows/**']
   workflow_dispatch:
 
 permissions:
@@ -32,7 +32,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_NAME" = fix-seed-permissions-migration-20261026
+          case "$GITHUB_REF_NAME" in
+            fix-seed-permissions-migration-20261026|migration-parity-rebuild) ;;
+            *) echo "Local regression workflow is restricted to review branches"; exit 1 ;;
+          esac
           test ! -e supabase/.temp/project-ref
           test -z "${SUPABASE_ACCESS_TOKEN:-}"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
