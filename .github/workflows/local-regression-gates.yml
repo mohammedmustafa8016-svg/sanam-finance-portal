@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [current, baseline]
+        variant: [current, baseline, upgrade]
     env:
       GATE_VARIANT: ${{ matrix.variant }}
     steps:
@@ -39,7 +39,7 @@ jobs:
           test ! -e supabase/.temp/project-ref
           test -z "${SUPABASE_ACCESS_TOKEN:-}"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          if [ "$GATE_VARIANT" = baseline ]; then
+          if [ "$GATE_VARIANT" != current ]; then
             rm supabase/migrations/20261026095100_fix_seed_permissions_for_user.sql
           fi
           supabase --version
@@ -63,6 +63,16 @@ jobs:
           mkdir -p gate-results
           supabase db reset --local --no-seed 2>&1 | tee gate-results/clean-rebuild.log
           cp migration-manifest.txt gate-results/
+      - name: Rehearse forward upgrade over synthetic populated baseline
+        if: matrix.variant == 'upgrade'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show HEAD:supabase/migrations/20261026095100_fix_seed_permissions_for_user.sql > supabase/migrations/20261026095100_fix_seed_permissions_for_user.sql
+          python3 tests/harness/verify-forward-upgrade.py
+          supabase migration up --help > gate-results/migration-up-help.txt
+          supabase migration up --local 2>&1 | tee gate-results/forward-migration.log
+          sha256sum supabase/migrations/*.sql > gate-results/target-migration-manifest.txt
       - name: Security RLS permissions and browser regression gates
         run: python3 tests/harness/run-gates.py
       - name: Upload logs and screenshots
