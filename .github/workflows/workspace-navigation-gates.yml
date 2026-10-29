@@ -1,0 +1,39 @@
+name: Workspace navigation regression
+on:
+  push:
+    branches: [feature-workspace-consolidation-20261029]
+  pull_request:
+    branches: [migration-parity-rebuild]
+    paths:
+      - index.html
+      - workspace-navigation.*
+      - tests/**
+      - .github/workflows/workspace-navigation-gates.yml
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix tests/harness --ignore-scripts --no-audit --no-fund
+      - run: tests/harness/node_modules/.bin/playwright install --with-deps chromium
+      - name: Resolve pinned browser runtime
+        run: |
+          echo "PLAYWRIGHT_PATH=$GITHUB_WORKSPACE/tests/harness/node_modules/playwright" >> "$GITHUB_ENV"
+          echo "CHROME_PATH=$(node -e 'console.log(require("./tests/harness/node_modules/playwright").chromium.executablePath())')" >> "$GITHUB_ENV"
+      - name: Isolated fixture browser regression
+        run: |
+          node --require ./tests/offline-browser-preload.cjs tests/workspace-navigation-browser.cjs
+          node --require ./tests/offline-browser-preload.cjs tests/workcenter-v5-browser.cjs
+          node --require ./tests/offline-browser-preload.cjs tests/portal-experience-browser.cjs
+          node --require ./tests/offline-browser-preload.cjs tests/cfo-delete-task-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workspace-browser-evidence
+          path: tests/*.png
