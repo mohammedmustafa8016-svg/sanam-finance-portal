@@ -42,4 +42,10 @@ At preparation time these CI jobs had **not run**; their latest results must be 
 6. Stage the production build, test that exact build against the verified upgrade, then promote it. Keep the previous application deployment available. Database rollback must preserve all newly created imports, links, assessments and attribution history; do not drop the new tables as a routine rollback.
 7. Observe API errors, Work Center latency, approval throughput and import/review errors after promotion. Existing automation health remains available; external deployment monitoring configuration could not be inspected.
 
-No production deployment, live migration, backup creation or restore rehearsal is claimed by this change.
+## Hosted isolated preview upgrade — 31 October 2026
+
+After explicit autonomous execution authorization, both migrations were applied to the existing isolated preview `lpanqnuwmeusmygzhcxm`. Its ledger now contains 75 entries (Supabase-generated hosted version timestamps differ from canonical repository filenames; no history rewrite was performed). The existing profile count stayed 1, payments/tasks stayed 0, and rollback-only authenticated smoke tests left zero imported records/batches or audit rows behind. Twelve readiness policies and all new RPCs exist, all six new tables have RLS, and client execution of internal permission seeding is denied. Hosted authenticated RPC checks passed for policies, idempotent import, source reading, the real performance report and operational health. The mutable helper search-path warnings disappeared.
+
+`release/preview-environment.json` declares only the known isolated preview URL and its public publishable key so Git previews can build without a production database fallback. It is used only when `VERCEL_ENV=preview`; production ignores it. It contains no service-role or secret key. The Git integration deployment and technical access to the running environment still require verification.
+
+No production deployment, production migration, production backup creation or production restore rehearsal is claimed by this change.

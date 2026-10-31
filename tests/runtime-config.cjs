@@ -7,5 +7,10 @@ const token='header.'+Buffer.from(JSON.stringify({role:'service_role'})).toStrin
 assert.throws(()=>configuration({...preview,SANAM_SUPABASE_PUBLISHABLE_KEY:token}),/MUST_NOT_REACH_BROWSER/);
 assert.equal(configuration(preview).supabaseUrl,preview.SANAM_SUPABASE_URL);
 assert.deepEqual(configuration({VERCEL_ENV:'production'}),{});
+const declaredPreview={preview_only:true,projectRef:'isolated-example',supabaseUrl:preview.SANAM_SUPABASE_URL,supabaseKey:preview.SANAM_SUPABASE_PUBLISHABLE_KEY};
+assert.equal(configuration({VERCEL_ENV:'preview'},declaredPreview).supabaseUrl,preview.SANAM_SUPABASE_URL);
+assert.deepEqual(configuration({VERCEL_ENV:'production'},declaredPreview),{},'Preview declaration never changes production');
+assert.throws(()=>configuration({VERCEL:'1'},declaredPreview),/DEPLOYMENT_ENVIRONMENT_REQUIRED/);
+assert.throws(()=>configuration({VERCEL_ENV:'preview'},{...declaredPreview,projectRef:'another-project'}),/REFERENCE_MISMATCH/);
 assert.throws(()=>configuration({...preview,SANAM_SUPABASE_URL:'https://user:password@isolated-example.supabase.co'}),/INVALID_SUPABASE_URL/);
 console.log('PASS: explicit preview isolation, no production fallback in previews, secret/service-role key refusal.');

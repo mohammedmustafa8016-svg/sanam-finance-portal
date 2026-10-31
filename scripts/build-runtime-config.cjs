@@ -1,7 +1,12 @@
 const fs=require('node:fs'),path=require('node:path');
 const productionHost='xpomwrpgxnjxabjnwnuz.supabase.co';
-function configuration(env){
- const urlText=env.SANAM_SUPABASE_URL,key=env.SANAM_SUPABASE_PUBLISHABLE_KEY;
+function configuration(env,declaredPreview){
+ if(env.VERCEL==='1'&&!env.VERCEL_ENV)throw Error('DEPLOYMENT_ENVIRONMENT_REQUIRED');
+ let urlText=env.SANAM_SUPABASE_URL,key=env.SANAM_SUPABASE_PUBLISHABLE_KEY;
+ if(env.VERCEL_ENV==='preview'&&!urlText&&!key&&declaredPreview?.preview_only===true){
+  if(new URL(declaredPreview.supabaseUrl).hostname!==declaredPreview.projectRef+'.supabase.co')throw Error('PREVIEW_PROJECT_REFERENCE_MISMATCH');
+  urlText=declaredPreview.supabaseUrl;key=declaredPreview.supabaseKey;
+ }
  if(!urlText&&!key){if(env.VERCEL_ENV==='preview')throw Error('PREVIEW_REQUIRES_ISOLATED_SUPABASE_CONFIG');return {};}
  if(!urlText||!key)throw Error('INCOMPLETE_SUPABASE_CONFIG');
  const url=new URL(urlText);
@@ -14,5 +19,5 @@ function configuration(env){
  }
  return {supabaseUrl:url.origin,supabaseKey:key};
 }
-if(require.main===module){const config=configuration(process.env);fs.writeFileSync(path.resolve(__dirname,'../runtime-config.js'),'window.SANAM_CONFIG = '+JSON.stringify(config)+';\n');console.log('Sanam runtime configuration generated; no credentials logged.');}
+if(require.main===module){const previewPath=path.resolve(__dirname,'../release/preview-environment.json');const declaredPreview=fs.existsSync(previewPath)?JSON.parse(fs.readFileSync(previewPath,'utf8')):undefined;const config=configuration(process.env,declaredPreview);fs.writeFileSync(path.resolve(__dirname,'../runtime-config.js'),'window.SANAM_CONFIG = '+JSON.stringify(config)+';\n');console.log('Sanam runtime configuration generated; no credentials logged.');}
 module.exports={configuration};
