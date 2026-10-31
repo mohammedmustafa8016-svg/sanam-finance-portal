@@ -52,7 +52,10 @@ jobs:
       - name: Isolate local rebuild and compare the previous 73-migration baseline
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_NAME" = implementation/remaining-phases-20261031
+          case "$GITHUB_REF_NAME" in
+            main|implementation/remaining-phases-20261031) ;;
+            *) echo "Unsupported branch for isolated release gates"; exit 1 ;;
+          esac
           test ! -e supabase/.temp/project-ref
           test -z "${SUPABASE_ACCESS_TOKEN:-}"
           if [ "$GATE_VARIANT" = baseline ]; then
