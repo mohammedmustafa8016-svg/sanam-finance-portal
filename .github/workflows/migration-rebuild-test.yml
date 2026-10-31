@@ -75,7 +75,7 @@ jobs:
           set -euo pipefail
           npx --yes supabase@2.121.0 db reset --local
 
-      - name: Verify local migration history is 74
+      - name: Verify local migration history is 79
         shell: bash
         env:
           PGPASSWORD: postgres
@@ -83,7 +83,7 @@ jobs:
           set -euo pipefail
           COUNT=$(psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -Atc "select count(*) from supabase_migrations.schema_migrations;")
           echo "Local migration count: $COUNT"
-          test "$COUNT" -eq 74
+          test "$COUNT" -eq 79
           npx --yes supabase@2.121.0 migration list --local
 
       - name: Stop disposable local stack
