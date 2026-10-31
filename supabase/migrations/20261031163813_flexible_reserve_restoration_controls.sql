@@ -59,7 +59,7 @@ begin
   where greatest(a.amount-a.restored_amount,0)>0
   order by a.use_date,a.source_type,a.source_id;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.get_reserve_account_monitor()
  RETURNS TABLE(bank_account_id uuid, company text, bank_name text, account_name text, account_no_last4 text, account_type text, reference_balance numeric, balance numeric, reserved_balance numeric, available_balance numeric, executed_outflows numeric, manual_support_draws numeric, restorations numeric, outstanding_restoration numeric, amount_to_restore_reference numeric, variance_to_reference numeric, last_movement_at timestamp with time zone, last_movement_type text)
@@ -85,7 +85,7 @@ with payment_uses as (
 select bl.id,bl.company,bl.bank_name,bl.account_name,case when coalesce(bl.account_no,'')='' then null else right(regexp_replace(bl.account_no,'\\s+','','g'),4) end,bl.account_type,b.reference_balance,bl.balance,bl.reserved_balance,bl.available_balance,coalesce(p.executed_outflows,0),coalesce(m.manual_support_draws,0),coalesce(r.restorations,0),(coalesce(p.outstanding,0)+coalesce(m.outstanding,0))::numeric,greatest(coalesce(b.reference_balance,bl.balance)-bl.balance,0)::numeric,case when b.reference_balance is null then null else (b.reference_balance-bl.balance)::numeric end,nullif(greatest(coalesce(m.last_movement_at,'epoch'::timestamptz),coalesce(r.last_movement_at,'epoch'::timestamptz)),'epoch'::timestamptz),lm.movement_type
 from public.bank_liquidity bl join public.bank_accounts b on b.id=bl.id left join p on p.bank_account_id=bl.id left join m on m.bank_account_id=bl.id left join r on r.bank_account_id=bl.id left join lm on lm.bank_account_id=bl.id
 where bl.account_type<>'Operational' and public.has_user_permission('data.bank_balances') order by case bl.account_type when 'Working Capital Reserve' then 1 when 'VAT Reserve' then 2 else 3 end,bl.company,bl.bank_name;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.record_reserve_movement(p_bank_account_id uuid, p_movement_type text, p_amount numeric, p_movement_date date DEFAULT CURRENT_DATE, p_note text DEFAULT NULL::text, p_requires_restoration boolean DEFAULT true, p_restores_movement_id uuid DEFAULT NULL::uuid, p_restores_payment_id uuid DEFAULT NULL::uuid)
  RETURNS uuid
@@ -185,7 +185,7 @@ begin
     ));
   return v_id;
 end;
-$function$
+$function$;
 
 create or replace function public.record_reserve_restoration_v3(p_bank_account_id uuid,p_amount numeric,p_movement_date date,p_note text,p_allocations jsonb,p_request_id uuid)
 returns uuid language plpgsql security definer set search_path=public,private,pg_temp as $$
@@ -295,4 +295,4 @@ begin
   from u
   order by u.movement_date desc,u.bank_account_id,u.source,u.reference;
 end;
-$function$
+$function$;

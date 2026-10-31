@@ -51,7 +51,7 @@ begin
   get diagnostics v_inserted=row_count;
   return v_inserted;
 end
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.monthly_close_release_notification_tick()
  RETURNS integer
@@ -109,7 +109,7 @@ begin
 
   return v_count;
 end
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION private.release_monthly_close_task_internal(p_close_task_id uuid, p_actor uuid)
  RETURNS uuid
@@ -231,7 +231,7 @@ begin
 
   return v_task_id;
 end
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.release_monthly_close_ready_tasks(p_close_period date DEFAULT NULL::date)
  RETURNS integer
@@ -266,7 +266,7 @@ begin
 
   return v_count;
 end
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.get_monthly_close_release_queue(p_close_period date DEFAULT NULL::date)
  RETURNS TABLE(close_task_id uuid, close_period date, track text, code text, name text, owner_id uuid, owner_name text, planned_start_date date, due_date date, priority text, output text, release_status text, released_at timestamp with time zone, released_by uuid, task_id uuid, task_status text, ready_to_release boolean)
@@ -305,7 +305,7 @@ left join public.tasks t on t.id=m.task_id
 where private.current_role()='CFO'
   and ((p_close_period is null and m.close_period>=date '2026-10-01') or m.close_period=p_close_period)
 order by m.close_period desc,m.planned_start_date,m.track,m.code,m.name;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.get_workcenter_dashboard_v5(p_scope text DEFAULT 'mine'::text, p_filters jsonb DEFAULT '{}'::jsonb)
  RETURNS jsonb
@@ -650,7 +650,7 @@ begin
     'team',people
   );
 end
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.get_finance_team_performance()
  RETURNS TABLE(user_id uuid, full_name text, role text, today_total integer, today_completed integer, today_overdue integer, pending_justifications integer, pending_review integer, month_total integer, month_completed integer, month_completion_rate numeric, tracked_on_time_rate numeric, close_total integer, close_completed integer, close_completion_rate numeric, today_operational_activities integer, month_operational_activities integer, payment_sla_overdue integer)
@@ -817,7 +817,7 @@ order by case pe.role
   when 'ARAccountant' then 4
   when 'APAccountant' then 5
   else 9 end,pe.full_name;
-$function$
+$function$;
 
 
 
@@ -852,4 +852,4 @@ begin
    'total',(select count(*) from filtered),'unread',(select count(*) from scoped where read_at is null),
    'scope',p_scope,'cycle_started_at',cycle_start) into result;
  return result;
-end $function$
+end $function$;

@@ -138,7 +138,7 @@ begin
 
   return v_instance;
 end
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.get_finance_team_performance()
  RETURNS TABLE(user_id uuid, full_name text, role text, today_total integer, today_completed integer, today_overdue integer, pending_justifications integer, pending_review integer, month_total integer, month_completed integer, month_completion_rate numeric, tracked_on_time_rate numeric, close_total integer, close_completed integer, close_completion_rate numeric, today_operational_activities integer, month_operational_activities integer, payment_sla_overdue integer)
@@ -305,7 +305,7 @@ order by case pe.role
   when 'ARAccountant' then 4
   when 'APAccountant' then 5
   else 9 end,pe.full_name;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.get_readonly_page_snapshot(p_page text)
  RETURNS jsonb
@@ -490,7 +490,7 @@ begin
   end if;
 
   return coalesce(v_result,'{}'::jsonb);
-end $function$
+end $function$;
 
 create or replace function public.get_payment_accounting_queue()
 returns table(payment_id uuid,company text,beneficiary text,amount numeric,status text,executed_at timestamptz,accounting_registered_at timestamptz,deadline_at timestamptz,hours_elapsed numeric,hours_remaining numeric,sla_status text,purpose text,bank_account_id uuid)
@@ -532,7 +532,7 @@ begin
    if v_role='GLAccountant' then perform private.log_employee_activity(new.pending_by,'PAYMENT_MARKED_PENDING','payment',new.id::text,'PAYMENT_MARKED_PENDING:'||new.id::text,case when new.executed_at is not null and coalesce(new.pending_at,now())>private.payment_sla_deadline(coalesce(new.accounting_registered_at,new.executed_at)) then 'Overdue' else 'Within SLA' end,jsonb_build_object('reason',new.pending_reason,'required_action',new.pending_action),coalesce(new.pending_at,now())); end if;
  end if;
  return new;
-end $function$
+end $function$;
 
 create or replace function public.mark_task_notifications_read(p_notification_ids uuid[])
 returns integer language plpgsql security definer set search_path=public,private,pg_temp as $$
