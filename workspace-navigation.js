@@ -5,7 +5,7 @@
     {id:'home',ar:'الرئيسية',en:'Home',pages:[['dashboard','ملخص اليوم','Today']]},
     {id:'work',ar:'مركز العمل',en:'Work Center',pages:[['workcenter','مركز العمل','Work Center'],['tasks','المهام','Tasks'],['control','الرقابة التشغيلية','Operations control'],['workload','أعباء العمل','Workload'],['escalations','التصعيدات','Escalations']]},
     {id:'payments',ar:'المدفوعات',en:'Payments',pages:[['payments','المطلوبة والاعتمادات','Requests & approvals'],['executed','المنفذة','Executed'],['pending','المعلقة','Pending'],['posted','المرحلة محاسبيًا','Posted in accounting']]},
-    {id:'treasury',ar:'الخزينة والبنوك',en:'Treasury & Banks',pages:[['banks','السيولة والبنوك','Liquidity & banks'],['reservev2','رقابة الاحتياطيات','Reserve monitoring']]},
+    {id:'treasury',ar:'الخزينة والبنوك',en:'Treasury & Banks',pages:[['banks','السيولة والبنوك','Liquidity & banks']]},
     {id:'imprest',ar:'العهد',en:'Imprest',pages:[['imprest','العهد والتمويل والتسويات','Funds, funding & settlements']]},
     {id:'close',ar:'الإقفال الشهري',en:'Monthly Close',pages:[['close','متابعة الإقفال','Close progress']]},
     {id:'performance',ar:'الأداء والتقارير',en:'Performance & Reports',pages:[['performance','التقييم وتقارير الموظفين','Evaluation & employee reports']]},
@@ -40,6 +40,7 @@
       button.type = 'button';
       button.className = 'workspace-link';
       button.dataset.workspace = space.id;
+      button.dataset.symbol = ({home:'⌂',work:'▦',payments:'⇄',treasury:'▤',imprest:'◇',close:'◷',performance:'▥',admin:'⚙'})[space.id];
       button.textContent = text(space.ar,space.en);
       if (space === current) button.setAttribute('aria-current','page');
       button.onclick = () => {
@@ -51,6 +52,7 @@
     header.replaceChildren();
     if (!current || !canPage(active)) { header.hidden = true; return; }
     header.hidden = false;
+    header.dataset.flow = current.id;
     const title = document.createElement('h1');
     title.textContent = text(current.ar,current.en);
     header.appendChild(title);
