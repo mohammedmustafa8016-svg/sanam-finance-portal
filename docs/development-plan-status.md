@@ -1,5 +1,7 @@
 # Sanam development plan: implementation status
 
+Current UI/domain-regression increment: [ux-and-domain-regression-20261031.md](ux-and-domain-regression-20261031.md). The checkpoint below is historical; the team deployment was updated on 31 October. It is not the current release status.
+
 The user's approved plan treats Sanam as a financial operations and control layer over Business Central. Accounting entries, vendors, customers, posted documents and accounting balances remain owned by BC. Dashboard owns tasks, operational approvals, responsibility, SLA, exceptions and performance. Enter once, use everywhere.
 
 Historical checkpoint: 29 October 2026. The table below records the state at the workspace-only PR. **Current implementation and open release prerequisites are in [remaining-phases-implementation.md](remaining-phases-implementation.md).** Passing a regression gate does not establish completion of this product plan.

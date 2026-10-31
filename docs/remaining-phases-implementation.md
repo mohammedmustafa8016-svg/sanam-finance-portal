@@ -1,5 +1,7 @@
 # Remaining phases — 31 October 2026
 
+Historical implementation/release preparation record. The production team project was upgraded on 31 October after access was restored; the earlier access blockers below are resolved. The next domain UI and regression increment is documented in [ux-and-domain-regression-20261031.md](ux-and-domain-regression-20261031.md). Backup restoration and the explicitly listed verification limits remain open.
+
 This branch implements reviewable increments of the user's approved Sanam plan. It is **not a certified production release**. The user authorized completing the work and applying the tested upgrade to the team deployment; no additional general permission is required. Missing access and missing verification are technical prerequisites, not a request to reconfirm the scope.
 
 ## Implemented

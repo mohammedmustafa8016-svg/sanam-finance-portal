@@ -1,5 +1,8 @@
 -- Synthetic test data only. The caller wraps this file and each SQL test in
 -- BEGIN/ROLLBACK. Never change functions, policies, grants or migration history.
+insert into public.allowed_users(email,full_name,role,finance_team)
+values('viewer@local.invalid','Local Viewer','Viewer',false)
+on conflict(email) do nothing;
 insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,
   raw_app_meta_data,raw_user_meta_data,created_at,updated_at,
   confirmation_token,recovery_token,email_change_token_new,email_change)
