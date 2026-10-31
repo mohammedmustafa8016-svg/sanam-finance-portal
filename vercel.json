@@ -1,6 +1,11 @@
 {
   "buildCommand": "node scripts/build-runtime-config.cjs",
-  "outputDirectory": ".",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "outputDirectory": ".",
+  "functions": {
+    "api/daily-payment-email.js": {
+      "maxDuration": 60
+    }
+  }
 }

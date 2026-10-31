@@ -4,7 +4,7 @@
   const spaces = [
     {id:'home',ar:'الرئيسية',en:'Home',pages:[['dashboard','ملخص اليوم','Today']]},
     {id:'work',ar:'مركز العمل',en:'Work Center',pages:[['workcenter','مركز العمل','Work Center'],['tasks','المهام','Tasks'],['control','الرقابة التشغيلية','Operations control'],['workload','أعباء العمل','Workload'],['escalations','التصعيدات','Escalations']]},
-    {id:'payments',ar:'المدفوعات',en:'Payments',pages:[['payments','المطلوبة والاعتمادات','Requests & approvals'],['executed','المنفذة','Executed'],['pending','المعلقة','Pending'],['posted','المرحلة محاسبيًا','Posted in accounting']]},
+    {id:'payments',ar:'المدفوعات',en:'Payments',pages:[['payments','المطلوبة والاعتمادات','Requests & approvals'],['executed','المنفذة','Executed'],['pending','المعلقة','Pending'],['posted','المرحلة محاسبيًا','Posted in accounting'],['dailyemail','البريد اليومي','Daily email']]},
     {id:'treasury',ar:'الخزينة والبنوك',en:'Treasury & Banks',pages:[['banks','السيولة والبنوك','Liquidity & banks']]},
     {id:'imprest',ar:'العهد',en:'Imprest',pages:[['imprest','العهد والتمويل والتسويات','Funds, funding & settlements']]},
     {id:'close',ar:'الإقفال الشهري',en:'Monthly Close',pages:[['close','متابعة الإقفال','Close progress']]},
