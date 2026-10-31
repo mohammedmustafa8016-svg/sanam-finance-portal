@@ -20,4 +20,6 @@ The full baseline and current clean rebuilds must pass before this change is int
 
 This closes a concrete domain-screen redesign and expands real database regression. It does not certify complete security coverage for every legacy RPC, backup/PITR restoration, sustained production latency, BC mapping with company exports, external monitoring, or server-enforced readiness policy. It also does not claim every old inline function has been extracted from index.html.
 
-The release pipeline still needs a true deployment prerequisite; tests running on main are not themselves a deployment lock. These items remain tracked separately from this UI release.
+Production builds now require a completed successful push run of the full release workflow for the exact Git revision. Missing, queued, failed, cancelled, skipped, mismatched or unavailable evidence blocks the new build and leaves the current release in place. Preview builds remain isolated and available for testing. An automatic production build that starts before CI finishes must be retried after CI success; no empty or stale evidence is accepted. Unit tests exercise the failure cases without network access.
+
+This build prerequisite does not replace GitHub branch protection or a complete repository administration policy. It reads only public workflow status and introduces no deployment token or browser secret. GitHub/Vercel metadata references: https://docs.github.com/en/rest/actions/workflow-runs and https://vercel.com/docs/environment-variables/system-environment-variables.

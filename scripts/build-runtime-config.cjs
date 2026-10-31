@@ -19,5 +19,14 @@ function configuration(env,declaredPreview){
  }
  return {supabaseUrl:url.origin,supabaseKey:key};
 }
-if(require.main===module){const previewPath=path.resolve(__dirname,'../release/preview-environment.json');const declaredPreview=fs.existsSync(previewPath)?JSON.parse(fs.readFileSync(previewPath,'utf8')):undefined;const config=configuration(process.env,declaredPreview);fs.writeFileSync(path.resolve(__dirname,'../runtime-config.js'),'window.SANAM_CONFIG = '+JSON.stringify(config)+';\n');console.log('Sanam runtime configuration generated; no credentials logged.');}
+if(require.main===module){(async()=>{
+ const {requireProductionGates}=require('./require-production-gates.cjs');
+ const gate=await requireProductionGates(process.env);
+ if(gate.required)console.log('Production release gates verified for revision '+gate.sha+' (run '+gate.runId+').');
+ const previewPath=path.resolve(__dirname,'../release/preview-environment.json');
+ const declaredPreview=fs.existsSync(previewPath)?JSON.parse(fs.readFileSync(previewPath,'utf8')):undefined;
+ const config=configuration(process.env,declaredPreview);
+ fs.writeFileSync(path.resolve(__dirname,'../runtime-config.js'),'window.SANAM_CONFIG = '+JSON.stringify(config)+';\n');
+ console.log('Sanam runtime configuration generated; no credentials logged.');
+})().catch(error=>{console.error(error.message);process.exitCode=1;});}
 module.exports={configuration};
