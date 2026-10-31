@@ -1,7 +1,7 @@
 name: Remaining phases release gates
 on:
   push:
-    branches: [implementation/remaining-phases-20261031]
+    branches: [main, implementation/remaining-phases-20261031]
   workflow_dispatch:
 permissions:
   contents: read
