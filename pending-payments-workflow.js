@@ -2,6 +2,8 @@
 (() => {
  'use strict';
  const $=id=>document.getElementById(id),T=(ar,en)=>currentLang==='en'?en:ar;
+ const words={'تاريخ التعليق':'Held since','نوع التعليق':'Hold type','المبلغ المعلق':'Held amount','المبلغ غير المعلق':'Unheld amount','سبب التعليق':'Hold reason','مسؤول المتابعة':'Follow-up owner','تاريخ المتابعة':'Follow-up date','مدة التعليق':'Days on hold','الإجراء المطلوب':'Required action','كامل':'Full','جزئي':'Partial','عمليات أوقفها محاسب القيود قبل التسجيل أو علّقها المشرف/المدير المالي بعد التسجيل، مع تبرير وملاحظات وتحديد كامل أو جزئي للمبلغ.':'Payments held by GL before registration or by Supervisor/CFO afterward, with reasons, notes and full/partial amounts.'};
+ Object.assign(I18N_AR_EN,words);for(const [ar,en] of Object.entries(words))I18N_EN_AR[en]=ar;
  const eligible=p=>!!p&&p.status==='معلقة'&&!!p.executed_at&&!p.posted_at;
  const manager=()=>['Supervisor','CFO'].includes(profile?.role);
  const reader=()=>!!profile&&!isReadonlyViewer()&&canPage('payments')&&['CFO','Supervisor','GLAccountant','BankAccountant','APAccountant'].includes(profile.role);

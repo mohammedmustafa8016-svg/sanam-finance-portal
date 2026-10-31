@@ -21,6 +21,7 @@ const assert=require('node:assert/strict');const {chromium}=require(process.env.
  });
  assert.equal(await page.locator('[data-pending-resume="held-pre"]').count(),0,'Supervisor cannot perform initial GL registration');
  assert.equal(await page.locator('[data-pending-resume="held-post"]').count(),1,'Supervisor can release registered hold');
+ const actionBox=await page.locator('[data-pending-resume="held-post"]').boundingBox();assert.ok(actionBox.x>=0&&actionBox.x+actionBox.width<=1441,'Action remains visible without horizontal scrolling');
  assert.equal(await page.locator('[data-pending-followup]').count(),2);
  await page.locator('[data-pending-resume="held-post"]').click();assert.match(await page.locator('#modalTitle').textContent(),/بعد التسجيل/);
  await page.locator('#pendingFlowSave').click();assert.equal(await page.evaluate(()=>pendingCalls.filter(c=>c.name==='resume_pending_payment').length),0);assert.match(await page.locator('#pendingFlowError').textContent(),/10/);
@@ -47,6 +48,7 @@ const assert=require('node:assert/strict');const {chromium}=require(process.env.
  await page.evaluate(()=>{profile={...profile,role:'Supervisor'};permissionMap={};applyAccess();renderPayments();openPage('pending','Pending');toggleLanguage();});
  assert.match(await page.locator('[data-pending-resume="held-post"]').textContent(),/Release hold/);
  await page.screenshot({path:'tests/pending-supervisor-desktop.png'});
- await page.locator('[data-pending-resume="held-post"]').click();await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:'tests/pending-resolution-mobile.png'});
+ await page.setViewportSize({width:390,height:844});const mobileAction=await page.locator('[data-pending-resume="held-post"]').boundingBox();assert.ok(mobileAction.x>=0&&mobileAction.x+mobileAction.width<=391,'Sticky action remains in the mobile viewport');
+ await page.locator('[data-pending-resume="held-post"]').click();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:'tests/pending-resolution-mobile.png'});
  assert.deepEqual(errors,[]);console.log('PASS: supervisor post-hold vs GL pre-hold, all seven roles, exact version/stale recovery, duplicate submission, no auto-post/bank action, follow-up/history, escaped audit notes, English and mobile.');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
