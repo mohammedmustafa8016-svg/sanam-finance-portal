@@ -1,5 +1,6 @@
 {
   "buildCommand": "node scripts/build-runtime-config.cjs",
+  "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": false
 }
