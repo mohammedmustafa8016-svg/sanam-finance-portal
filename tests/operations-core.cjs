@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict');const core=require('../operations-core');
+const text='\uFEFFsource_id,amount,currency,posting_date,beneficiary\r\nBC-1,"1,234.50",SAR,2026-10-31,"Vendor, \"\"Sanam\"\""\r\n';
+const parsed=core.parseCsv(text);const mapping=Object.fromEntries(parsed.headers.map(h=>[h,h]));
+const rows=core.mapRows(parsed,mapping,{decimal:'.',group:','});assert.equal(rows[0].amount,1234.5);assert.equal(rows[0].beneficiary,'Vendor, "Sanam"');
+assert.throws(()=>core.mapRows(core.parseCsv(text+text.split('\r\n')[1]),mapping,{group:','}),/DUPLICATE_SOURCE_ID/);
+assert.throws(()=>core.isoDate('2026-02-30'),/INVALID_ISO_DATE/);
+assert.throws(()=>core.amount('1,234'),/INVALID_AMOUNT/);
+assert.equal(core.amount('1.234,50',',','.'),1234.5);
+assert.throws(()=>core.amount('12,34.50','.',','),/INVALID_AMOUNT/);
+assert.throws(()=>core.amount('1e3'),/INVALID_AMOUNT/);
+assert.throws(()=>core.amount('90071992547409.91'),/AMOUNT_OUT_OF_RANGE/);
+assert.throws(()=>core.parseCsv('id,id\na,b'),/DUPLICATE_OR_EMPTY_HEADER/);
+assert.throws(()=>core.parseCsv('id,name\na,"unclosed'),/UNCLOSED_CSV_QUOTE/);
+assert.throws(()=>core.parseCsv('id,name\na,b,c'),/INCONSISTENT_COLUMNS/);
+assert.equal(core.parseCsv('id;name\na;"a\nb"',';').rows[0][1],'a\nb');
+assert.throws(()=>core.mapRows(parsed,{...mapping,currency:'source_id'},{group:','}),/DUPLICATE_MAPPING/);
+console.log('PASS: CSV quoting/BOM/multiline, explicit numeric formats, duplicate identity, strict dates, mapping and malformed input.');

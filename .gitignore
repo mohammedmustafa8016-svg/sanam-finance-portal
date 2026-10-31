@@ -1,0 +1,10 @@
+node_modules/
+supabase/.temp/
+supabase/.branches/
+gate-results/
+tests/*.png
+tests/*.zip
+__pycache__/
+*.pyc
+.env
+.env.*

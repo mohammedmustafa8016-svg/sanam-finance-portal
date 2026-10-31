@@ -1,0 +1,80 @@
+name: Remaining phases release gates
+on:
+  push:
+    branches: [implementation/remaining-phases-20261031]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit-contract-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix tests/harness --ignore-scripts --no-audit --no-fund
+      - run: tests/harness/node_modules/.bin/playwright install --with-deps chromium
+      - run: |
+          echo "PLAYWRIGHT_PATH=$GITHUB_WORKSPACE/tests/harness/node_modules/playwright" >> "$GITHUB_ENV"
+          echo "CHROME_PATH=$(node -e 'console.log(require("./tests/harness/node_modules/playwright").chromium.executablePath())')" >> "$GITHUB_ENV"
+      - name: CSV and PostgreSQL contract tests
+        run: |
+          node tests/operations-core.cjs
+          node tests/governed-controls-database.cjs
+      - name: Browser regression with blocked external requests
+        run: |
+          for test in tests/*browser.cjs; do node --require ./tests/offline-browser-preload.cjs "$test"; done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: operations-browser-evidence
+          path: tests/*.png
+  full-local-supabase:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [current, baseline]
+    env:
+      GATE_VARIANT: ${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+      - name: Isolate local rebuild and compare the previous 73-migration baseline
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = implementation/remaining-phases-20261031
+          test ! -e supabase/.temp/project-ref
+          test -z "${SUPABASE_ACCESS_TOKEN:-}"
+          if [ "$GATE_VARIANT" = baseline ]; then
+            rm supabase/migrations/20261031013052_governed_operations_controls.sql
+            rm supabase/migrations/20261031013837_workcenter_set_based_performance.sql
+          fi
+          sha256sum supabase/migrations/*.sql > migration-manifest.txt
+      - run: npm ci --prefix tests/harness --ignore-scripts --no-audit --no-fund
+      - run: tests/harness/node_modules/.bin/playwright install chromium
+      - run: supabase start
+      - name: Clean rebuild and full regression
+        run: |
+          set -euo pipefail
+          mkdir -p gate-results
+          supabase db reset --local --no-seed 2>&1 | tee gate-results/clean-rebuild.log
+          cp migration-manifest.txt gate-results/
+          python3 tests/harness/run-gates.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-supabase-evidence-${{ matrix.variant }}
+          path: |
+            gate-results/
+            tests/*.png
+      - if: always()
+        run: supabase stop --no-backup

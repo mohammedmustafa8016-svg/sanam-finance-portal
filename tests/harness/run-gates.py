@@ -13,6 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'gate-results'
 OUT.mkdir(exist_ok=True)
 RESULTS = []
+MANIFEST = sorted(p.name.split('_', 1)[0] for p in (ROOT / 'supabase/migrations').glob('*.sql'))
+assert len(MANIFEST) == len(set(MANIFEST)) and all(v.isdigit() for v in MANIFEST)
+HARDENED = any((ROOT / 'supabase/migrations').glob('*_governed_operations_controls.sql'))
 CONTAINER = subprocess.check_output(['docker', 'ps', '--format', '{{.Names}}'], text=True)
 CONTAINER = next(n for n in CONTAINER.splitlines() if n.startswith('supabase_db_'))
 
@@ -44,7 +47,7 @@ def check(name, body, gate='Security', fixture=False):
 check('migration-history-and-empty-database', f"""
 do $$ declare n int; begin
  select count(*) into n from supabase_migrations.schema_migrations;
- if n <> {72 if os.getenv('GATE_VARIANT') == 'baseline' else 73} then
+ if n <> {len(MANIFEST)} then
    raise exception 'MIGRATION_COUNT: %',n; end if;
  if exists(select 1 from auth.users) or exists(select 1 from public.tasks)
     or exists(select 1 from public.payments) then raise exception 'DATABASE_NOT_EMPTY'; end if;
@@ -73,14 +76,14 @@ do $$ declare bad text; begin
 end $$;
 """)
 
-check('seed-function-security-contract', """
+check('seed-function-security-contract', f"""
 do $$ declare f oid:=to_regprocedure('public.seed_permissions_for_user(uuid)'); begin
  if f is null then raise exception 'SEED_FUNCTION_MISSING'; end if;
  if not exists(select 1 from pg_proc where oid=f and prosecdef
    and proconfig @> array['search_path=public, private, pg_temp']) then
    raise exception 'SEED_SECURITY_OR_SEARCH_PATH'; end if;
  if has_function_privilege('anon',f,'EXECUTE') then raise exception 'SEED_ANON_EXECUTE'; end if;
- if not has_function_privilege('authenticated',f,'EXECUTE')
+ if has_function_privilege('authenticated',f,'EXECUTE') is distinct from {'false' if HARDENED else 'true'}
  or not has_function_privilege('service_role',f,'EXECUTE') then raise exception 'SEED_ROLE_EXECUTE'; end if;
 end $$;
 """)
@@ -133,6 +136,9 @@ end $$;
 # Existing repo SQL tests run unmodified. Supply only the data/pre-activation
 # conditions explicitly required by their comments, within the same rollback.
 for path in sorted((ROOT / 'tests').glob('*.sql')):
+    if path.name in ('governed-operations-controls.sql','workcenter-v5-performance.sql') and not HARDENED:
+        print('SKIP baseline: new operations/performance checks: '+path.name, flush=True)
+        continue
     setup = (ROOT / 'tests/harness/fixtures.sql').read_text()
     setup += '\n' + (ROOT / 'tests/harness/workflow-fixtures.sql').read_text()
     if path.name in ('workcenter-v5.sql', 'workcenter-v5-plan.sql', 'workcenter-v5-payment-cycle.sql'):
