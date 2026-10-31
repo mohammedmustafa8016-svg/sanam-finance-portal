@@ -22,6 +22,7 @@ const assert=require('node:assert/strict');const {chromium}=require(process.env.
  assert.equal(await page.locator('[data-pending-resume="held-pre"]').count(),0,'Supervisor cannot perform initial GL registration');
  assert.equal(await page.locator('[data-pending-resume="held-post"]').count(),1,'Supervisor can release registered hold');
  const actionBox=await page.locator('[data-pending-resume="held-post"]').boundingBox();assert.ok(actionBox.x>=0&&actionBox.x+actionBox.width<=1441,'Action remains visible without horizontal scrolling');
+ const header=await page.locator('#pendingTable th').last().boundingBox(),cell=await page.locator('#pendingBody tr').last().locator('td').last().boundingBox();assert.ok(Math.abs(header.x-cell.x)<1,'Sticky action heading stays aligned with its cells');
  assert.equal(await page.locator('[data-pending-followup]').count(),2);
  await page.locator('[data-pending-resume="held-post"]').click();assert.match(await page.locator('#modalTitle').textContent(),/بعد التسجيل/);
  await page.locator('#pendingFlowSave').click();assert.equal(await page.evaluate(()=>pendingCalls.filter(c=>c.name==='resume_pending_payment').length),0);assert.match(await page.locator('#pendingFlowError').textContent(),/10/);
