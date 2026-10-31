@@ -115,13 +115,16 @@
     nav.id="imprestWorkspaceTabs";
     nav.className="imprest-workspace-tabs";
     nav.setAttribute("role","tablist");
-    nav.innerHTML=tabs.map(([key,ar,en])=>`<button class="imprest-workspace-tab" type="button" role="tab" data-imprest-tab="${key}" onclick="switchImprestWorkspaceTab('${key}')">${tx(ar,en)}</button>`).join("");
+    nav.innerHTML=tabs.filter(x=>['register','funding','settlements'].includes(x[0])).map(([key,ar,en])=>`<button class="imprest-workspace-tab" type="button" role="tab" data-imprest-tab="${key}" onclick="switchImprestWorkspaceTab('${key}')">${tx(ar,en)}</button>`).join("");
 
     const workspace=document.createElement("div");
     workspace.id="imprestWorkspace";
     workspace.innerHTML=tabs.map(([key])=>`<div id="imprestWorkspacePanel_${key}" class="imprest-workspace-panel" data-imprest-panel="${key}"></div>`).join("");
 
-    if(header)header.after(nav,workspace);else section.prepend(nav,workspace);
+    const tools=document.createElement('details');tools.className='imprest-secondary-tools';
+    const summary=document.createElement('summary');summary.textContent=tx('ملخص وحركة ورقابة','Summary, ledger & controls');tools.append(summary);
+    for(const [key,ar,en] of tabs.filter(x=>!['register','funding','settlements'].includes(x[0]))){const button=document.createElement('button');button.type='button';button.className='btn';button.textContent=tx(ar,en);button.dataset.imprestSecondary=key;button.onclick=()=>{switchTab(key);tools.open=false;};tools.append(button);}
+    if(header)header.after(nav,tools,workspace);else section.prepend(nav,tools,workspace);
 
     const registerWrap=document.getElementById("imprestTable")?.closest(".table-wrap");
     if(registerWrap)document.getElementById("imprestWorkspacePanel_register")?.appendChild(registerWrap);
@@ -141,8 +144,8 @@
     document.getElementById("imprestWorkspacePanel_ledger").innerHTML='<div id="imprestWorkspaceLedger"></div>';
     document.getElementById("imprestWorkspacePanel_controls").innerHTML='<div id="imprestWorkspaceControls"></div>';
 
-    const requested=localStorage.getItem(STORAGE_KEY)||"overview";
-    switchTab(tabs.some(x=>x[0]===requested)?requested:"overview",false);
+    const requested=localStorage.getItem(STORAGE_KEY)||"register";
+    switchTab(tabs.some(x=>x[0]===requested)?requested:"register",false);
     state.ready=true;
   }
 
@@ -510,6 +513,13 @@
 
       [...cell.querySelectorAll(":scope > button:not(.imprest-action-trigger)")].forEach(btn=>source.appendChild(btn));
 
+      const seen=new Map();
+      [...source.querySelectorAll('button[onclick]')].forEach(button=>{
+        const key=button.getAttribute('onclick').trim(),previous=seen.get(key);
+        if(!previous){seen.set(key,button);return;}
+        if(previous.disabled&&!button.disabled){previous.remove();seen.set(key,button);}else button.remove();
+      });
+
       const count=[...source.querySelectorAll("button")].filter(btn=>!btn.disabled&&!btn.classList.contains("hidden")).length;
       let trigger=cell.querySelector(":scope > .imprest-action-trigger");
       if(!count){
@@ -605,9 +615,11 @@
       setTimeout(()=>{
         const header=document.querySelector("#imprest > .imprest-workspace-header .muted");
         if(header)header.textContent=tx("إدارة العهد والتمويل والتصفية والحركات والرقابة","Imprest management, funding, settlement, ledger and controls");
-        const current=document.querySelector("#imprestWorkspaceTabs .imprest-workspace-tab.active")?.dataset.imprestTab||"overview";
+        const current=localStorage.getItem(STORAGE_KEY)||"register";
+        document.querySelectorAll("[data-imprest-secondary]").forEach(b=>{const tab=tabs.find(x=>x[0]===b.dataset.imprestSecondary);if(tab)b.textContent=tx(tab[1],tab[2]);});
+        const summary=document.querySelector(".imprest-secondary-tools summary");if(summary)summary.textContent=tx("ملخص وحركة ورقابة","Summary, ledger & controls");
         const nav=document.getElementById("imprestWorkspaceTabs");
-        if(nav)nav.innerHTML=tabs.map(([key,ar,en])=>`<button class="imprest-workspace-tab ${current===key?"active":""}" type="button" role="tab" aria-selected="${current===key?"true":"false"}" data-imprest-tab="${key}" onclick="switchImprestWorkspaceTab('${key}')">${tx(ar,en)}</button>`).join("");
+        if(nav)nav.innerHTML=tabs.filter(x=>['register','funding','settlements'].includes(x[0])).map(([key,ar,en])=>`<button class="imprest-workspace-tab ${current===key?"active":""}" type="button" role="tab" aria-selected="${current===key?"true":"false"}" data-imprest-tab="${key}" onclick="switchImprestWorkspaceTab('${key}')">${tx(ar,en)}</button>`).join("");
         renderOverview();renderFunding();renderControls();
         if(document.getElementById("imprestWorkspacePanel_ledger")?.classList.contains("active"))renderLedger();
       },0);

@@ -1,0 +1,58 @@
+-- Disposable fixture transaction only.
+do $$begin if exists(select 1 from public.profiles where email not like '%@local.invalid') then raise exception 'LOCAL_FIXTURE_REQUIRED';end if;end$$;
+do $$declare sup uuid;other_user uuid;n1 uuid;n2 uuid;result_count integer;begin
+ if private.payment_sla_deadline('2026-10-29T10:00:00+03:00')<>'2026-11-02T10:00:00+03:00'::timestamptz then raise exception 'SLA_WEEKEND_DEADLINE';end if;
+ if private.payment_sla_seconds('2026-10-29T10:00:00+03:00','2026-11-02T10:00:00+03:00')<>172800 then raise exception 'SLA_ELIGIBLE_SECONDS';end if;
+ if private.payment_sla_seconds('2026-10-30T00:00:00+03:00','2026-11-01T00:00:00+03:00')<>0 then raise exception 'SLA_COUNTS_WEEKEND';end if;
+ if private.payment_sla_deadline('2026-10-28T00:00:00+03:00')<>'2026-11-01T00:00:00+03:00'::timestamptz then raise exception 'SLA_ENDS_INSIDE_WEEKEND';end if;
+ if private.payment_sla_seconds('2026-10-29T23:59:59+03:00','2026-11-01T00:00:01+03:00')<>2 then raise exception 'SLA_SECOND_BOUNDARY';end if;
+ select id into sup from public.profiles where role='Supervisor';select id into other_user from public.profiles where role='BankAccountant';
+ insert into public.task_notifications(user_id,notification_type,title,unique_key) values(sup,'TASK_COMMENT','Synthetic own notice','local-own') returning id into n1;
+ insert into public.task_notifications(user_id,notification_type,title,unique_key) values(other_user,'TASK_COMMENT','Synthetic other notice','local-other') returning id into n2;
+ perform set_config('request.jwt.claim.sub',sup::text,true);
+ result_count:=public.mark_task_notifications_read(array[n1,n2,n1]);
+ if result_count<>1 or (select read_at from public.task_notifications where id=n2) is not null then raise exception 'BULK_READ_CROSSED_RECIPIENT';end if;
+ if public.mark_task_notifications_read(array[n1])<>0 then raise exception 'BULK_READ_NOT_IDEMPOTENT';end if;
+ perform set_config('request.jwt.claim.sub','',true);
+ begin perform public.mark_task_notifications_read(array[n2]);raise exception 'BULK_READ_ANON_ALLOWED';exception when others then if sqlerrm<>'NOT_AUTHORIZED' then raise;end if;end;
+ if has_function_privilege('anon','public.mark_task_notifications_read(uuid[])','execute') then raise exception 'BULK_READ_ANON_GRANT';end if;
+end$$;
+select 'PASS: eligible hours/weekend/seconds, own-recipient bulk read, duplicate IDs, idempotency and anonymous denial' as result;
+do $$declare cfo uuid;sup uuid;banker uuid;account uuid;other_account uuid;d1 uuid;d2 uuid;d3 uuid;receipt uuid;request_id uuid:=gen_random_uuid();alloc jsonb;remaining numeric;old_count integer;u record;begin
+ select id into cfo from public.profiles where role='CFO';select id into sup from public.profiles where role='Supervisor';select id into banker from public.profiles where role='BankAccountant';
+ perform set_config('request.jwt.claim.sub',cfo::text,true);
+ insert into public.bank_accounts(company,bank_name,account_name,account_type,balance,reference_balance) values('LOCAL-RESERVE','Bank','Reserve','Working Capital Reserve',50000,60000) returning id into account;
+ insert into public.bank_accounts(company,bank_name,account_name,account_type,balance) values('OTHER-COMPANY','Bank','Other reserve','VAT Reserve',10000) returning id into other_account;
+ perform set_config('request.jwt.claim.sub',sup::text,true);
+ d1:=public.record_reserve_movement(account,'Support Draw',3000,current_date,'Synthetic draw one');
+ d2:=public.record_reserve_movement(account,'Support Draw',5000,current_date,'Synthetic draw two');
+ d3:=public.record_reserve_movement(other_account,'Support Draw',4000,current_date,'Synthetic other account');
+ alloc:=jsonb_build_array(jsonb_build_object('source_type','Support Draw','source_id',d1,'amount',3000),jsonb_build_object('source_type','Support Draw','source_id',d2,'amount',3500));
+ receipt:=public.record_reserve_restoration_v3(account,6500,current_date,'One real receipt',alloc,request_id);
+ if public.record_reserve_restoration_v3(account,6500,current_date,'One real receipt',alloc,request_id)<>receipt then raise exception 'RESTORATION_RETRY_NOT_IDEMPOTENT';end if;
+ if (select count(*) from public.bank_reserve_movements where restoration_request_id=request_id)<>1 or (select count(*) from public.reserve_recovery_allocations_v3 where restoration_movement_id=receipt)<>2 then raise exception 'RESTORATION_RECEIPT_DUPLICATED';end if;
+ select outstanding_amount into remaining from public.get_recoverable_reserve_uses(account) where source_id=d2;
+ if remaining<>1500 or exists(select 1 from public.get_recoverable_reserve_uses(account) where source_id=d1) then raise exception 'RESTORATION_REMAINING_WRONG';end if;
+ if (select balance from public.bank_accounts where id=account)<>50000 then raise exception 'RESTORATION_DUPLICATED_BANK_EFFECT';end if;
+ begin perform public.record_reserve_restoration_v3(account,4000,current_date,'Other account',jsonb_build_array(jsonb_build_object('source_type','Support Draw','source_id',d3,'amount',4000)),gen_random_uuid());raise exception 'CROSS_ACCOUNT_RESTORATION_ALLOWED';exception when others then if sqlerrm<>'RESERVE_ALLOCATION_EXCEEDS_OUTSTANDING' then raise;end if;end;
+ begin perform public.record_reserve_movement(account,'Restoration',1600,current_date,'Legacy over-allocation',null,d2,null);raise exception 'LEGACY_IGNORED_ALLOCATION';exception when others then if sqlerrm<>'Restoration amount exceeds outstanding recoverable amount' then raise;end if;end;
+ for u in select id,role from public.profiles where active loop
+  perform set_config('request.jwt.claim.sub',u.id::text,true);
+  if u.role<>'CFO' then begin update public.bank_accounts set balance=49000 where id=account;raise exception 'RESERVE_BALANCE_MUTABLE';exception when others then if sqlerrm<>'RESERVE_BALANCE_CFO_ONLY' then raise;end if;end;end if;
+  if u.role not in ('Supervisor','BankAccountant') then begin perform public.record_reserve_movement(account,'Support Draw',1,current_date,'Unauthorized role');raise exception 'RESERVE_MOVEMENT_ROLE_ALLOWED';exception when others then if sqlerrm<>'Not authorized to record reserve movements' then raise;end if;end;end if;
+ end loop;
+ perform set_config('request.jwt.claim.sub',banker::text,true);
+ perform public.record_reserve_movement(account,'Restoration',1500,current_date,'Complete remainder',null,d2,null);
+ if exists(select 1 from public.get_recoverable_reserve_uses(account) where source_id=d2) then raise exception 'RESTORATION_LEGACY_REMAINDER_WRONG';end if;
+ perform set_config('request.jwt.claim.sub',cfo::text,true);update public.bank_accounts set balance=51000 where id=account;
+ insert into public.payments(due_date,company,beneficiary,amount,bank_account_id,supervisor_status,cfo_status,status,requested_by) values(current_date,'LOCAL-RESERVE','Protected bank execution',100,account,'موافق','موافق','معتمد للدفع',banker) returning id into d3;
+ perform set_config('request.jwt.claim.sub',banker::text,true);perform public.execute_payment(d3);
+ if (select balance from public.bank_accounts where id=account)<>50900 then raise exception 'PROTECTED_PAYMENT_AUTO_DEBIT_BLOCKED';end if;
+ perform set_config('request.jwt.claim.sub',cfo::text,true);
+ if private.generate_monthly_close_tasks(date '2026-09-01')<>0 then raise exception 'OLD_CLOSE_GENERATED';end if;
+ insert into public.monthly_close_tasks(name,owner_id,due_date,planned_start_date,close_period,release_status) values('Historical cycle',banker,current_date-1,current_date-2,date '2026-09-01','Planned') returning id into d1;
+ begin perform public.release_monthly_close_task(d1);raise exception 'OLD_CLOSE_RELEASED';exception when others then if sqlerrm<>'MONTHLY_CLOSE_HISTORICAL_CYCLE' then raise;end if;end;
+ if exists(select 1 from public.get_monthly_close_release_queue(null) where close_task_id=d1) then raise exception 'OLD_CLOSE_IN_ACTIVE_QUEUE';end if;
+ if not exists(select 1 from public.monthly_close_tasks where id=d1) then raise exception 'CLOSE_HISTORY_DELETED';end if;
+end$$;
+select 'PASS: one receipt/multiple partial allocations, idempotent retry, legacy compatibility, no second bank effect, role/balance restrictions, historical close preservation and release denial' as result;

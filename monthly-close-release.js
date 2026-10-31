@@ -14,21 +14,26 @@ function monthlyCloseReleaseLabel(s){
   return ({Planned:"مخططة — لم تُفتح",Released:"مفتوحة في مركز العمل",Completed:"مكتملة",Cancelled:"ملغاة"})[s]||s||"—";
 }
 
+let closeHistoryView=false;
 function renderClose(){
-  let rows=closeTasks||[];
+  let rows=(closeTasks||[]).filter(x=>closeHistoryView?String(x.close_period||'').slice(0,7)<'2026-10':String(x.close_period||'').slice(0,7)>='2026-10');
+  let toggle=document.getElementById('closeHistoryToggle');
+  if(!toggle){toggle=document.createElement('button');toggle.id='closeHistoryToggle';toggle.type='button';toggle.className='btn';toggle.onclick=()=>{closeHistoryView=!closeHistoryView;renderClose();};document.querySelector('#close .row')?.append(toggle);}
+  toggle.textContent=currentLang==='en'?(closeHistoryView?'Active cycles':'Previous cycles (history)'):(closeHistoryView?'الدورات الحالية':'الدورات السابقة — سجل فقط');
+  toggle.setAttribute('aria-pressed',String(closeHistoryView));
   const latest=[...rows].map(function(x){return x.close_period}).filter(Boolean).sort().pop();
   if(closeQuickView&&rows.length){
     rows=rows.filter(function(x){return x.close_period===latest&&x.status!=="مكتمل"&&Number(x.progress||0)<100});
   }
   const today=riyadhToday();
   const ready=(closeTasks||[]).filter(function(x){
-    return x.close_period===latest&&x.release_status==="Planned"&&!x.task_id&&x.planned_start_date&&x.planned_start_date<=today;
+    return !closeHistoryView&&String(x.close_period||'').slice(0,7)>='2026-10'&&today>='2026-11-01'&&x.close_period===latest&&x.release_status==="Planned"&&!x.task_id&&x.planned_start_date&&x.planned_start_date<=today;
   });
   const releaseAll=document.getElementById("releaseReadyCloseBtn");
   if(releaseAll)releaseAll.classList.toggle("hidden",profile.role!=="CFO"||!ready.length);
   closeBody.innerHTML=rows.map(function(x){
-    const canRelease=profile.role==="CFO"&&x.release_status==="Planned"&&!x.task_id&&x.planned_start_date&&x.planned_start_date<=today;
-    const canOpenTask=!!x.task_id&&(profile.role==="CFO"||profile.role==="Supervisor"||x.owner_id===profile.id);
+    const canRelease=!closeHistoryView&&String(x.close_period||'').slice(0,7)>='2026-10'&&today>='2026-11-01'&&profile.role==="CFO"&&x.release_status==="Planned"&&!x.task_id&&x.planned_start_date&&x.planned_start_date<=today;
+    const canOpenTask=!closeHistoryView&&!!x.task_id&&(profile.role==="CFO"||profile.role==="Supervisor"||x.owner_id===profile.id);
     const actions=[];
     if(canRelease)actions.push('<button class="btn primary" onclick="releaseMonthlyCloseTask(\''+esc(x.id)+'\')">'+(currentLang==="en"?"Release":displayText("فتح في مركز العمل"))+'</button>');
     if(canOpenTask)actions.push('<button class="btn" onclick="openTaskWorkspace(\''+esc(x.task_id)+'\')">'+displayText("فتح المهمة")+'</button>');
@@ -68,7 +73,7 @@ async function releaseReadyMonthlyCloseTasks(){
   const latest=[...(closeTasks||[])].map(function(x){return x.close_period}).filter(Boolean).sort().pop()||null;
   const today=riyadhToday();
   const ready=(closeTasks||[]).filter(function(x){
-    return (!latest||x.close_period===latest)&&x.release_status==="Planned"&&!x.task_id&&x.planned_start_date&&x.planned_start_date<=today;
+    return String(x.close_period||'').slice(0,7)>='2026-10'&&today>='2026-11-01'&&(!latest||x.close_period===latest)&&x.release_status==="Planned"&&!x.task_id&&x.planned_start_date&&x.planned_start_date<=today;
   });
   if(!ready.length)return alert(currentLang==="en"?"No monthly-close tasks are ready for release.":"لا توجد مهام إقفال مستحقة وجاهزة للفتح.");
   const msg=currentLang==="en" ?

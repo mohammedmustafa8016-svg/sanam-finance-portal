@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');const sla=require('../sla-calendar.js');
+assert.equal(sla.deadline('2026-10-29T10:00:00+03:00').toISOString(),'2026-11-02T07:00:00.000Z');
+assert.equal(sla.seconds('2026-10-29T10:00:00+03:00','2026-11-02T10:00:00+03:00'),172800);
+assert.equal(sla.seconds('2026-10-30T00:00:00+03:00','2026-11-01T00:00:00+03:00'),0);
+assert.equal(sla.seconds('2026-10-29T23:59:59+03:00','2026-11-01T00:00:01+03:00'),2);
+assert.equal(sla.deadline('2026-10-30T10:00:00+03:00').toISOString(),'2026-11-02T21:00:00.000Z');
+const p={executed_at:'2026-10-29T10:00:00+03:00',accounting_registered_at:'2026-11-02T09:00:00+03:00',status:'معلقة'};
+assert.equal(sla.info(p,Date.parse('2026-11-02T10:00:00+03:00')).remaining,'47.0h');
+assert.equal(sla.info({...p,status:'تم التسجيل',pending_resolved_at:'2026-11-03T00:00:00Z'},Date.parse('2026-11-04T10:00:00+03:00')).cls,'sla-overdue');
+assert.equal(sla.info({executed_at:p.executed_at},Date.parse('2026-11-02T10:00:00.001+03:00')).cls,'sla-overdue');
+assert.equal(sla.seconds('2026-11-02T10:00:00+03:00','2026-10-29T10:00:00+03:00'),-172800);
+assert.equal(sla.deadline('2026-10-28T00:00:00+03:00').toISOString(),'2026-10-31T21:00:00.000Z');
+assert.equal(sla.info({executed_at:'2026-10-28T00:00:00+03:00'},Date.parse('2026-10-31T15:00:00+03:00')).cls,'sla-due');
+console.log('PASS: Riyadh weekend boundaries, 48 eligible hours, independent phases, hold/resume never reset, millisecond late boundary.');

@@ -102,6 +102,11 @@ begin
  if (select count(*) from public.imprest_ledger_entries where settlement_id=settlement and entry_type='SETTLEMENT')<>1 then raise exception 'SETTLEMENT_LEDGER_MISSING';end if;
 
  perform set_config('request.jwt.claim.sub',cfo::text,true);
+ if to_regprocedure('private.close_work_in_scope(text,text)') is not null and (now() at time zone 'Asia/Riyadh')::date<date '2026-11-01' then
+  perform pg_temp.expect_domain_denial(format('select public.release_monthly_close_task(%L)',close_item),'MONTHLY_CLOSE_STARTS_NOVEMBER_2026');
+  raise notice 'October close is correctly blocked until 1 November; baseline verifies release/completion linkage';
+  return;
+ end if;
  close_task=public.release_monthly_close_task(close_item);
  if public.release_monthly_close_task(close_item)<>close_task then raise exception 'CLOSE_RELEASE_NOT_IDEMPOTENT';end if;
  if (select count(*) from public.tasks where source_entity_type='monthly_close_task' and source_entity_id=close_item::text)<>1 then raise exception 'DUPLICATE_CLOSE_TASK';end if;

@@ -136,6 +136,9 @@ end $$;
 # Existing repo SQL tests run unmodified. Supply only the data/pre-activation
 # conditions explicitly required by their comments, within the same rollback.
 for path in sorted((ROOT / 'tests').glob('*.sql')):
+    if path.name == 'unified-operations.sql' and not any((ROOT / 'supabase/migrations').glob('*_unified_operations_sla_and_inbox.sql')):
+        print('SKIP baseline: unified operations checks', flush=True)
+        continue
     if path.name == 'pending-payment-stage-resume.sql' and not any((ROOT / 'supabase/migrations').glob('*_pending_payment_stage_resume.sql')):
         print('SKIP baseline: pending stage resume checks', flush=True)
         continue

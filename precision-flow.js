@@ -37,6 +37,12 @@
         const details=document.createElement('dl');
         for(const [name,value] of [[labels('الشركة','Company'),payment.company],[labels('الحالة','Status'),payment.status],[labels('الغرض','Purpose'),payment.purpose]]){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=name;dd.textContent=value||'—';details.append(dt,dd);}panel.append(details);
         const timeline=document.createElement('ol');timeline.className='pf-timeline';
+        if(payment.executed_at&&!payment.posted_at&&typeof SanamSla!=='undefined'){
+          const sla=SanamSla.info(payment,Date.now(),currentLang),clock=document.createElement('div');clock.className='pf-sla';
+          const phase=document.createElement('b');phase.textContent=sla.phase==='posting'?labels('المراجعة والترحيل · 48 ساعة','Review & posting · 48 hours'):labels('التسجيل المحاسبي · 48 ساعة','Accounting registration · 48 hours');
+          const counter=document.createElement('p');counter.className=sla.cls;counter.textContent=`${sla.label} · ${sla.remaining}`;
+          const note=document.createElement('small');note.textContent=labels('الجمعة والسبت خارج الحساب. التعليق لا يوقف العد.','Friday/Saturday excluded. Holds do not pause the clock.');clock.append(phase,counter,note);panel.append(clock);
+        }
         for(const [name,date] of [[labels('الإنشاء','Created'),payment.created_at],[labels('التنفيذ البنكي','Bank execution'),payment.executed_at],[labels('التسجيل المحاسبي','Accounting registration'),payment.accounting_registered_at],[labels('الترحيل','Posting'),payment.posted_at]]){if(!date)continue;const item=document.createElement('li');item.textContent=`${name} · ${fmt(date)}`;timeline.append(item);}panel.append(timeline);
         const actions=document.createElement('div');actions.className='pf-actions';actions.innerHTML=payment.status==='معلقة'&&typeof pendingPaymentActions==='function'?pendingPaymentActions(payment):paymentActions(payment);panel.append(actions);
         const note=document.createElement('p');note.className='muted';note.textContent=labels('تظهر الإجراءات حسب صلاحيتك وحالة المعاملة الحالية.','Actions follow your permissions and the current transaction state.');panel.append(note);

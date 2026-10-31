@@ -159,7 +159,12 @@
       let html=` <button class="btn" type="button" onclick="openImprestLedgerV2('${escV(f.id)}')">${tx("كشف حركة العهدة","Imprest Ledger")}</button>`;
       if(canFund())html+=` <button class="btn primary" type="button" onclick="openImprestFundingV2('${escV(f.id)}')">+ ${tx("إضافة مبلغ للعهدة","Add Funding")}</button>`;
       if(canRefund())html+=` <button class="btn" type="button" onclick="openImprestRefundV2('${escV(f.id)}')">${tx("تسجيل استرداد","Record Refund")}</button>`;
-      wrap.innerHTML=html;cell.appendChild(wrap);
+      wrap.innerHTML=html;
+      // The workspace moves buttons out of this wrapper. Check the actual action,
+      // so another enhancement pass cannot append the same operation again.
+      const existing=new Set([...cell.querySelectorAll('button[onclick]')].map(b=>b.getAttribute('onclick').trim()));
+      [...wrap.querySelectorAll('button')].forEach(button=>{if(existing.has(button.getAttribute('onclick').trim()))button.remove();});
+      if(wrap.children.length)cell.appendChild(wrap);
     });
   }
 
