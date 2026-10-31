@@ -21,6 +21,7 @@ jobs:
           echo "CHROME_PATH=$(node -e 'console.log(require("./tests/harness/node_modules/playwright").chromium.executablePath())')" >> "$GITHUB_ENV"
       - name: CSV and PostgreSQL contract tests
         run: |
+          node tests/runtime-config.cjs
           node tests/operations-core.cjs
           node tests/governed-controls-database.cjs
       - name: Browser regression with blocked external requests

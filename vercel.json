@@ -1,4 +1,5 @@
 {
+  "buildCommand": "node scripts/build-runtime-config.cjs",
   "cleanUrls": true,
   "trailingSlash": false
 }

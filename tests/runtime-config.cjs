@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict');const {configuration}=require('../scripts/build-runtime-config.cjs');
+const preview={VERCEL_ENV:'preview',SANAM_SUPABASE_URL:'https://isolated-example.supabase.co',SANAM_SUPABASE_PUBLISHABLE_KEY:'sb_publishable_test'};
+assert.throws(()=>configuration({VERCEL_ENV:'preview'}),/PREVIEW_REQUIRES/);
+assert.throws(()=>configuration({...preview,SANAM_SUPABASE_URL:'https://xpomwrpgxnjxabjnwnuz.supabase.co'}),/PRODUCTION_DATABASE_DENIED/);
+assert.throws(()=>configuration({...preview,SANAM_SUPABASE_PUBLISHABLE_KEY:'sb_secret_example'}),/PUBLISHABLE_OR_ANON/);
+const token='header.'+Buffer.from(JSON.stringify({role:'service_role'})).toString('base64url')+'.signature';
+assert.throws(()=>configuration({...preview,SANAM_SUPABASE_PUBLISHABLE_KEY:token}),/MUST_NOT_REACH_BROWSER/);
+assert.equal(configuration(preview).supabaseUrl,preview.SANAM_SUPABASE_URL);
+assert.deepEqual(configuration({VERCEL_ENV:'production'}),{});
+assert.throws(()=>configuration({...preview,SANAM_SUPABASE_URL:'https://user:password@isolated-example.supabase.co'}),/INVALID_SUPABASE_URL/);
+console.log('PASS: explicit preview isolation, no production fallback in previews, secret/service-role key refusal.');

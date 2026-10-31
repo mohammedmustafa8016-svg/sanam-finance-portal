@@ -1,6 +1,7 @@
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..'),out=path.join(root,'gate-results');fs.mkdirSync(out,{recursive:true});
 const cases=[
+ ['Preview isolation',['tests/runtime-config.cjs']],
  ['CSV validation',['tests/operations-core.cjs']],
  ['PostgreSQL contract',['tests/governed-controls-database.cjs']],
  ...['operations-platform','workspace-navigation','workcenter-v5','portal-experience','cfo-delete-task'].map(name=>[name,['--require','./tests/offline-browser-preload.cjs',`tests/${name}-browser.cjs`]])

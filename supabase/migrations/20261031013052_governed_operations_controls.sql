@@ -39,7 +39,11 @@ create table public.work_delay_attributions (
        (status<>'Pending' and decided_by is not null and decided_at is not null))
 );
 create index work_delay_attributions_item_status on public.work_delay_attributions(work_item_id,status);
+create index work_delay_attributions_employee on public.work_delay_attributions(employee_id,requested_at desc);
+create index work_delay_attributions_pending on public.work_delay_attributions(requested_at) where status='Pending';
+create index bc_import_batches_latest on public.bc_import_batches(company,record_type,imported_at desc,id desc);
 create index bc_mirror_records_batch on public.bc_mirror_records(batch_id);
+create index portal_client_error_actor_time on public.audit_log(actor_id,created_at desc) where action='PORTAL_CLIENT_ERROR';
 create table public.bc_payment_links (
  company text not null, source_id text not null, payment_id uuid unique references public.payments(id) on delete set null,
  source_snapshot jsonb not null, linked_by uuid not null references public.profiles(id),linked_at timestamptz not null default now(),
@@ -277,6 +281,13 @@ begin
 end $$;
 
 -- Internal seeding is not a client API; triggers/owners and service_role retain access.
+do $$declare f record;begin
+ for f in select p.oid from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+  where n.nspname='private' and p.proname in ('policy_snapshot','workcenter_role_family','workcenter_scope_allowed') loop
+  execute format('alter function %s set search_path=public,private,pg_temp',f.oid::regprocedure);
+ end loop;
+end $$;
+
 create function public.record_portal_client_error(p_code text,p_page text) returns void language plpgsql security definer set search_path=public,private,pg_temp as $$
 begin
  if auth.uid() is null or not exists(select 1 from public.profiles where id=auth.uid() and active) then raise exception 'NOT_AUTHORIZED'; end if;
