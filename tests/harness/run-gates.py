@@ -136,6 +136,9 @@ end $$;
 # Existing repo SQL tests run unmodified. Supply only the data/pre-activation
 # conditions explicitly required by their comments, within the same rollback.
 for path in sorted((ROOT / 'tests').glob('*.sql')):
+    if path.name == 'daily-payment-mail.sql' and not any((ROOT / 'supabase/migrations').glob('*_delegated_outlook_daily_payment_mail.sql')):
+        print('SKIP baseline: delegated email checks', flush=True)
+        continue
     if path.name == 'unified-operations.sql' and not any((ROOT / 'supabase/migrations').glob('*_unified_operations_sla_and_inbox.sql')):
         print('SKIP baseline: unified operations checks', flush=True)
         continue

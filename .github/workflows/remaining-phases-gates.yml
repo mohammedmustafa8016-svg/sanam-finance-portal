@@ -23,6 +23,7 @@ jobs:
         run: |
           node tests/runtime-config.cjs
           node tests/production-release-gate.cjs
+          node tests/daily-payment-mail-api.cjs
           node tests/sla-calendar.cjs
           node tests/sla-calendar-database.cjs
           node tests/operations-core.cjs
@@ -68,6 +69,7 @@ jobs:
             rm supabase/migrations/20261031163024_unified_operations_sla_and_inbox.sql
             rm supabase/migrations/20261031163813_flexible_reserve_restoration_controls.sql
             rm supabase/migrations/20261031164216_monthly_close_october_2026_cutoff.sql
+            rm supabase/migrations/20261031165315_delegated_outlook_daily_payment_mail.sql
           fi
           sha256sum supabase/migrations/*.sql > migration-manifest.txt
       - run: npm ci --prefix tests/harness --ignore-scripts --no-audit --no-fund
