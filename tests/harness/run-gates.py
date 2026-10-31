@@ -136,6 +136,9 @@ end $$;
 # Existing repo SQL tests run unmodified. Supply only the data/pre-activation
 # conditions explicitly required by their comments, within the same rollback.
 for path in sorted((ROOT / 'tests').glob('*.sql')):
+    if path.name == 'pending-payment-stage-resume.sql' and not any((ROOT / 'supabase/migrations').glob('*_pending_payment_stage_resume.sql')):
+        print('SKIP baseline: pending stage resume checks', flush=True)
+        continue
     if path.name in ('governed-operations-controls.sql','workcenter-v5-performance.sql') and not HARDENED:
         print('SKIP baseline: new operations/performance checks: '+path.name, flush=True)
         continue

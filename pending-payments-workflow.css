@@ -1,0 +1,2 @@
+.pending-flow-actions{min-width:230px;max-width:420px;align-items:center}.pending-flow-actions .muted{flex-basis:100%;white-space:normal}.pending-flow-footer{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}#pendingFlowModal>p{line-height:1.9;color:var(--muted)}#pendingResumeFeedback{margin-bottom:14px;border-inline-start:3px solid var(--green)}#pendingHistory article p{white-space:pre-wrap;overflow-wrap:anywhere}#pendingFlowError[hidden]{display:none}
+@media(max-width:620px){.pending-flow-footer .btn{width:100%}.pending-flow-actions{min-width:200px}}

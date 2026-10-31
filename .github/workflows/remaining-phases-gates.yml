@@ -62,6 +62,7 @@ jobs:
           if [ "$GATE_VARIANT" = baseline ]; then
             rm supabase/migrations/20261031013052_governed_operations_controls.sql
             rm supabase/migrations/20261031013837_workcenter_set_based_performance.sql
+            rm supabase/migrations/20261031115342_pending_payment_stage_resume.sql
           fi
           sha256sum supabase/migrations/*.sql > migration-manifest.txt
       - run: npm ci --prefix tests/harness --ignore-scripts --no-audit --no-fund
