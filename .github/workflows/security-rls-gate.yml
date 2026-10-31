@@ -67,7 +67,7 @@ jobs:
           psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -v ON_ERROR_STOP=1 \
             -f tests/security-rls-audit.sql
 
-      - name: Verify migration history remains 74
+      - name: Verify migration history remains 79
         shell: bash
         run: |
           set -euo pipefail
