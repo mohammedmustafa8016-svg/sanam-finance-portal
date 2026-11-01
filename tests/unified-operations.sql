@@ -18,6 +18,18 @@ do $$declare sup uuid;other_user uuid;n1 uuid;n2 uuid;result_count integer;begin
  if has_function_privilege('anon','public.mark_task_notifications_read(uuid[])','execute') then raise exception 'BULK_READ_ANON_GRANT';end if;
 end$$;
 select 'PASS: eligible hours/weekend/seconds, own-recipient bulk read, duplicate IDs, idempotency and anonymous denial' as result;
+do $$declare u uuid;n1 uuid;n2 uuid;ids uuid[];begin
+ if to_regprocedure('public.get_task_notification_selection_v1(text)') is null then return;end if;
+ select id into u from public.profiles where role='Supervisor';perform set_config('request.jwt.claim.sub',u::text,true);
+ insert into public.task_notifications(user_id,notification_type,title,unique_key) values(u,'TASK_COMMENT','All-results snapshot','local-snapshot-before') returning id into n1;
+ ids:=public.get_task_notification_selection_v1('current');
+ if not(n1=any(ids)) then ids:=public.get_task_notification_selection_v1('history');end if;
+ if not(n1=any(ids)) then raise exception 'ALL_RESULTS_SELECTION_MISSED_OWN_ROW';end if;
+ insert into public.task_notifications(user_id,notification_type,title,unique_key) values(u,'TASK_COMMENT','New arrival','local-snapshot-after') returning id into n2;
+ perform public.mark_task_notifications_read(ids);
+ if (select read_at from public.task_notifications where id=n1) is null or (select read_at from public.task_notifications where id=n2) is not null then raise exception 'ALL_RESULTS_SELECTION_INCLUDED_NEW_ARRIVAL';end if;
+ if has_function_privilege('anon','public.get_task_notification_selection_v1(text)','execute') then raise exception 'ALL_RESULTS_SELECTION_ANON_LEAK';end if;
+end$$;
 do $$declare cfo uuid;sup uuid;banker uuid;account uuid;other_account uuid;d1 uuid;d2 uuid;d3 uuid;receipt uuid;request_id uuid:=gen_random_uuid();alloc jsonb;remaining numeric;old_count integer;u record;begin
  select id into cfo from public.profiles where role='CFO';select id into sup from public.profiles where role='Supervisor';select id into banker from public.profiles where role='BankAccountant';
  perform set_config('request.jwt.claim.sub',cfo::text,true);
@@ -49,6 +61,10 @@ do $$declare cfo uuid;sup uuid;banker uuid;account uuid;other_account uuid;d1 uu
  perform set_config('request.jwt.claim.sub',banker::text,true);perform public.execute_payment(d3);
  if (select balance from public.bank_accounts where id=account)<>50900 then raise exception 'PROTECTED_PAYMENT_AUTO_DEBIT_BLOCKED';end if;
  perform set_config('request.jwt.claim.sub',cfo::text,true);
+ if to_regprocedure('public.get_task_notification_selection_v1(text)') is not null then
+  perform public.reclassify_reserve_support_draw(d2,false,'CFO verified completed recovery classification');
+  if (select (details->>'linked_restorations')::numeric from public.audit_log where action='RESERVE_DRAW_RECLASSIFIED' and entity_id=d2::text limit 1)<>5000 then raise exception 'RECLASSIFICATION_AUDIT_IGNORED_MULTIPLE_ALLOCATIONS';end if;
+ end if;
  if private.generate_monthly_close_tasks(date '2026-09-01')<>0 then raise exception 'OLD_CLOSE_GENERATED';end if;
  insert into public.monthly_close_tasks(name,owner_id,due_date,planned_start_date,close_period,release_status) values('Historical cycle',banker,current_date-1,current_date-2,date '2026-09-01','Planned') returning id into d1;
  begin perform public.release_monthly_close_task(d1);raise exception 'OLD_CLOSE_RELEASED';exception when others then if sqlerrm<>'MONTHLY_CLOSE_HISTORICAL_CYCLE' then raise;end if;end;

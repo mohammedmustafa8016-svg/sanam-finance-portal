@@ -1,4 +1,31 @@
 -- Serialize the recovery target as well as its bank. Preserve existing CFO reclassification authority.
+-- All-result inbox selection is an immutable recipient-scoped snapshot of IDs.
+create or replace function public.get_task_notification_selection_v1(p_scope text default 'current')
+returns uuid[] language plpgsql stable security invoker set search_path=public,private,pg_temp as $$
+declare ids uuid[]:='{}';page jsonb;item jsonb;offset_value integer:=0;total integer;
+begin
+ loop
+  page:=public.get_notification_inbox_v6(p_scope,true,100,offset_value);
+  total:=(page->>'total')::integer;
+  if total>5000 then raise exception 'NOTIFICATION_SELECTION_TOO_LARGE';end if;
+  for item in select value from jsonb_array_elements(page->'items') loop ids:=array_append(ids,(item->>'id')::uuid);end loop;
+  offset_value:=offset_value+100;
+  exit when offset_value>=total;
+ end loop;
+ return ids;
+end$$;
+revoke all on function public.get_task_notification_selection_v1(text) from public,anon;
+grant execute on function public.get_task_notification_selection_v1(text) to authenticated;
+create or replace function public.mark_task_notifications_read(p_notification_ids uuid[])
+returns integer language plpgsql security definer set search_path=public,private,pg_temp as $$
+declare changed integer;
+begin
+ if auth.uid() is null or not exists(select 1 from public.profiles where id=auth.uid() and active) then raise exception 'NOT_AUTHORIZED';end if;
+ if coalesce(cardinality(p_notification_ids),0)>5000 then raise exception 'NOTIFICATION_SELECTION_TOO_LARGE';end if;
+ update public.task_notifications set read_at=now() where user_id=auth.uid() and id=any(p_notification_ids) and read_at is null;
+ get diagnostics changed=row_count;
+ return changed;
+end$$;
 create or replace function public.record_reserve_restoration_v3(p_bank_account_id uuid,p_amount numeric,p_movement_date date,p_note text,p_allocations jsonb,p_request_id uuid)
 returns uuid language plpgsql security definer set search_path=public,private,pg_temp as $$
 declare bank public.bank_accounts%rowtype;existing public.bank_reserve_movements%rowtype;entry jsonb;item record;total numeric;receipt uuid;target uuid;kind text;part numeric;remaining numeric;
