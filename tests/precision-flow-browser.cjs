@@ -8,6 +8,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
  assert.equal(await page.locator('[data-workspace-page=reservev2]').count(),0);
  await page.locator('#pfCommand').click();await page.locator('#pfSearchInput').fill('المعلقة');assert.equal(await page.locator('#pfSearchResults button').count(),1);await page.locator('#pfSearchResults button').click();
  await page.locator('[data-pf-detail=design-selected]').click();
+ const heading=await page.locator('#pending .pf-decision h3').boundingBox(),content=await page.locator('.main .content').boundingBox();assert.ok(heading.y>=content.y,'Decision heading stays visible after selection');
  assert.match(await page.locator('#pending .pf-decision').textContent(),/مورد تجريبي/);
  assert.equal(await page.locator('#pending .pf-decision [data-pending-resume]').count(),1,'Uses the authoritative stage-specific action builder');
  assert.equal(await page.evaluate(()=>payments[0].pending_amount),3000,'Selection never changes financial data');
