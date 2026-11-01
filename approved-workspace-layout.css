@@ -1,3 +1,5 @@
+/* Inactive application pages must never be exposed by component display rules. */
+html.workspace-navigation-ready .section:not(.active){display:none!important}
 
 /* Approved layout: original financial workflows remain authoritative. */
 :root{--experience-gold:#417fff;--pf-primary:#81123e}
@@ -10,7 +12,7 @@ html.workspace-experience-ready .workspace-tab{padding:9px 19px;border-radius:10
 html.workspace-experience-ready .workspace-tab[aria-selected=true]{background:var(--surface);border-color:var(--border);box-shadow:0 3px 12px #10203907;color:var(--text)}
 html.workspace-experience-ready .content{padding:0 4px 28px;scrollbar-gutter:stable}
 
-#workcenter{display:flex;flex-direction:column;gap:0;max-width:1900px}
+#workcenter.active{display:flex;flex-direction:column;gap:0;max-width:1900px}
 .wc-hero{order:0;padding:18px 4px 20px;margin:0;gap:16px;align-items:center}.wc-kicker{display:none}.wc-hero h2{font-size:32px;letter-spacing:-.04em;margin:0 0 7px}.wc-hero p{font-size:13px;color:var(--muted)}
 .wc-meta{margin-top:10px;font-size:11px;gap:12px}.wc-cycle{background:transparent;border-color:var(--border);color:var(--muted);padding:4px 9px;border-radius:8px}#wcWorkdayStatus{font-size:11px;color:var(--muted);margin-top:7px}
 .wc-hero-actions{max-width:650px;gap:8px}.wc-hero-actions .btn{min-height:40px;padding-inline:16px;font-size:12px}#wcAdhocTaskBtn{background:var(--surface);color:var(--text);border-color:var(--border)}
