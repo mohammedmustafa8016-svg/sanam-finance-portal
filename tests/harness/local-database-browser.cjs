@@ -142,6 +142,19 @@ async function runLifecycle(browser) {
     await cfo.screenshot({path:path.join(out,'lifecycle-deleted.png'),fullPage:true});
     assert.deepEqual(lifecycle.pageErrors,[]);
     assert.deepEqual(lifecycle.apiErrors,[]);
+    if(fs.existsSync(path.join(root,'supabase/migrations/20261101060328_reserve_allocation_concurrency_hardening.sql'))){
+      const bankId=await cfo.evaluate(async()=>{const {data,error}=await sb.from('bank_accounts').insert({company:'LOCAL-CONCURRENCY',bank_name:'Local bank',account_name:'Concurrent reserve',account_type:'Working Capital Reserve',balance:1000}).select('id').single();if(error)throw error;return data.id;});
+      const token=await supervisor.evaluate(async()=>(await sb.auth.getSession()).data.session.access_token);
+      const call=async(name,args)=>{const r=await fetch(api+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:anon,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(args)});return {ok:r.ok,data:await r.json()};};
+      const draw=await call('record_reserve_movement',{p_bank_account_id:bankId,p_movement_type:'Support Draw',p_amount:100,p_note:'Local concurrent recovery test'});assert.equal(draw.ok,true,JSON.stringify(draw.data));
+      const attempts=await Promise.all([1,2].map(()=>call('record_reserve_restoration_v3',{p_bank_account_id:bankId,p_amount:80,p_movement_date:new Date().toISOString().slice(0,10),p_note:'Concurrent synthetic receipt',p_allocations:[{source_type:'Support Draw',source_id:draw.data,amount:80}],p_request_id:require('node:crypto').randomUUID()})));
+      assert.equal(attempts.filter(r=>r.ok).length,1,'Only one competing 80/100 allocation may commit');
+      assert.match(attempts.find(r=>!r.ok).data.message,/RESERVE_ALLOCATION_EXCEEDS_OUTSTANDING/);
+      const outstanding=await call('get_recoverable_reserve_uses',{p_bank_account_id:bankId});assert.equal(Number(outstanding.data[0].outstanding_amount),20);
+      const receipts=await localRows('bank_reserve_movements','select=id,amount&bank_account_id=eq.'+bankId+'&movement_type=eq.Restoration');assert.equal(receipts.length,1);assert.equal(Number(receipts[0].amount),80);
+      const bank=await localRows('bank_accounts','select=balance&id=eq.'+bankId);assert.equal(Number(bank[0].balance),1000,'Allocation never duplicates a bank effect');
+      lifecycle.steps.push('Concurrent real PostgREST restoration calls serialize: one receipt 80, remaining 20, competing over-allocation denied, bank balance unchanged');
+    }
     lifecycle.status='PASS';
   } catch(error) {
     lifecycle.error=error.stack;
