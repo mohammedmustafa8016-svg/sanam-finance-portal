@@ -1,0 +1,31 @@
+
+/* Approved layout: original financial workflows remain authoritative. */
+:root{--experience-gold:#417fff;--pf-primary:#81123e}
+html.workspace-navigation-ready .app{padding:16px;gap:16px;grid-template-columns:112px minmax(0,1fr);background:radial-gradient(ellipse at 0 0,#81123e09,transparent 50%),var(--bg)}
+html.workspace-navigation-ready .main,html.workspace-navigation-ready .side{height:calc(100vh - 32px)}
+html.workspace-navigation-ready .top{min-height:68px;border-radius:20px;padding:12px 22px}
+html.workspace-experience-ready #workspaceHeader{background:transparent;border:0;box-shadow:none;padding:8px 4px 0;flex-shrink:0}
+#workspaceHeader h1{display:none}#workspaceHeader .workspace-tabs{margin:0;padding:4px 0 8px;border-bottom:1px solid var(--border)}
+html.workspace-experience-ready .workspace-tab{padding:9px 19px;border-radius:10px;background:transparent;font-size:13px;border:1px solid transparent;color:var(--muted)}
+html.workspace-experience-ready .workspace-tab[aria-selected=true]{background:var(--surface);border-color:var(--border);box-shadow:0 3px 12px #10203907;color:var(--text)}
+html.workspace-experience-ready .content{padding:0 4px 28px;scrollbar-gutter:stable}
+
+#workcenter{display:flex;flex-direction:column;gap:0;max-width:1900px}
+.wc-hero{order:0;padding:18px 4px 20px;margin:0;gap:16px;align-items:center}.wc-kicker{display:none}.wc-hero h2{font-size:32px;letter-spacing:-.04em;margin:0 0 7px}.wc-hero p{font-size:13px;color:var(--muted)}
+.wc-meta{margin-top:10px;font-size:11px;gap:12px}.wc-cycle{background:transparent;border-color:var(--border);color:var(--muted);padding:4px 9px;border-radius:8px}#wcWorkdayStatus{font-size:11px;color:var(--muted);margin-top:7px}
+.wc-hero-actions{max-width:650px;gap:8px}.wc-hero-actions .btn{min-height:40px;padding-inline:16px;font-size:12px}#wcAdhocTaskBtn{background:var(--surface);color:var(--text);border-color:var(--border)}
+#workcenter>.wc-shell:first-of-type{order:2}.wc-metrics{order:1;margin:0 0 18px;gap:0;border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:hidden;grid-template-columns:repeat(6,minmax(0,1fr))}
+.wc-metric{border:0;border-inline-end:1px solid var(--border);border-radius:0;box-shadow:none;padding:16px 20px;background:transparent;display:flex;flex-direction:column;gap:6px;min-height:92px}.wc-metric:last-child{border-inline-end:0}.wc-metric span{font-size:12px;color:var(--muted)}.wc-metric strong{font-size:27px;margin:0;font-weight:650}.wc-metric:hover,.wc-metric[aria-pressed=true]{background:var(--surface-soft);box-shadow:inset 0 -3px var(--blue);border-color:var(--border)}
+#workcenter>.wc-shell{order:2;border-radius:17px;padding:16px 18px;margin-bottom:16px;box-shadow:0 7px 26px #17202e04}
+#workcenter>.wc-shell:has(.wc-tabs){display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 16px}.wc-scope{grid-column:2;grid-row:1;margin:0;align-items:center;gap:12px}.wc-scope .wc-history-link{font-size:11px}.wc-tabs{grid-column:1;grid-row:1;border:0;padding:0;align-items:center;gap:4px}
+.wc-tab{font-size:12px;padding:10px 12px;border-radius:10px;gap:7px}.wc-tab[aria-selected=true]{background:var(--nav);color:#fff;box-shadow:none}.wc-count{font-size:10px;min-width:20px;border-radius:6px;padding:3px 5px}
+.wc-scope>.wc-segment{border:1px solid var(--border);padding:3px}.wc-segment button{padding:7px 12px;font-size:11px}.wc-filters{grid-column:1/-1;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);gap:10px}.wc-filters label{font-size:11px;gap:6px}.wc-filters input,.wc-filters select{background:var(--surface-soft);border-color:var(--border);min-height:39px;font-size:12px;border-radius:10px}
+#wcResults{order:3}.wc-panel-heading{margin-bottom:10px}.wc-panel-heading h3{font-size:17px}.wc-panel-heading p{font-size:11px}.wc-table-scroll{border:1px solid var(--border);border-radius:12px}.wc-list-table th{background:var(--surface-soft);padding:12px;font-size:11px}.wc-list-table td{padding:15px 12px;vertical-align:middle;line-height:1.65}.wc-title-link{font-size:13px}.wc-overdue-row{box-shadow:inset -3px 0 #d78b39}
+#teamOperationsMonitorWrap{order:5!important}#workcenter>p.wc-section-note{order:6}#wcError{order:2}.wc-sub{font-size:10px}.preview-disclaimer{color:#c9d7ec;font-size:10px;margin-top:5px}.wc-filters:has(#wcCompletionDates.hidden){display:none}
+@media(max-width:1250px){#workcenter>.wc-shell:has(.wc-tabs){display:flex;flex-direction:column;gap:12px}.wc-scope{justify-content:space-between;flex-wrap:wrap}.wc-hero{align-items:start}.wc-hero-actions{max-width:480px}.wc-tab{font-size:11px;padding:9px}.wc-metric{padding:14px}}
+@media(max-width:900px){html.workspace-navigation-ready .app{display:flex;grid-template-columns:none;padding:8px;gap:8px}html.workspace-navigation-ready .main,html.workspace-navigation-ready .side{height:auto}.wc-hero{padding:14px 4px;flex-direction:column}.wc-hero-actions{max-width:100%}.wc-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.wc-metric{min-height:80px;border-bottom:1px solid var(--border)}.wc-hero h2{font-size:26px}.wc-tabs{overflow-x:auto;max-width:100%}.wc-tab{flex-shrink:0}.wc-hero-actions .btn{padding-inline:10px}#workcenter>.wc-shell{padding:12px}.wc-scope>div{max-width:100%}.wc-scope .wc-history-link{display:inline-block;max-width:180px}.pf-command{min-width:0}}
+@media print{.preview-disclaimer{display:none}#workcenter>.wc-shell:has(.wc-tabs),.wc-hero-actions{display:none}}
+
+
+.wc-hero{padding:12px 4px 16px;align-items:center}.wc-hero>div:first-child{flex:1;min-width:0}.wc-hero p{display:none}.wc-hero h2{font-size:30px;line-height:1.3}.wc-meta{margin-top:9px}#wcWorkdayStatus{margin:0;font-size:11px}.wc-metric{min-height:78px;padding:12px 18px;gap:3px}.wc-metric strong{font-size:25px}.wc-metrics{margin-bottom:14px}
+#wcResults .wc-panel-heading h3{display:inline-block;margin-inline-end:12px}#wcResults #wcResultCount{display:inline-block;font-size:11px;padding:4px 9px;background:var(--surface-soft);border-radius:7px;margin:0}#wcResults>.wc-scope:has(#wcDecisionWrap.hidden):has(#wcClearMetric.hidden){display:none}.wc-filters{margin-top:12px;padding-top:12px}.wc-filters input,.wc-filters select{min-height:36px}.wc-panel-heading{align-items:center}
