@@ -31,3 +31,14 @@ html.workspace-experience-ready .content{padding:0 4px 28px;scrollbar-gutter:sta
 
 .wc-hero{padding:12px 4px 16px;align-items:center}.wc-hero>div:first-child{flex:1;min-width:0}.wc-hero p{display:none}.wc-hero h2{font-size:30px;line-height:1.3}.wc-meta{margin-top:9px}#wcWorkdayStatus{margin:0;font-size:11px}.wc-metric{min-height:78px;padding:12px 18px;gap:3px}.wc-metric strong{font-size:25px}.wc-metrics{margin-bottom:14px}
 #wcResults .wc-panel-heading h3{display:inline-block;margin-inline-end:12px}#wcResults #wcResultCount{display:inline-block;font-size:11px;padding:4px 9px;background:var(--surface-soft);border-radius:7px;margin:0}#wcResults>.wc-scope:has(#wcDecisionWrap.hidden):has(#wcClearMetric.hidden){display:none}.wc-filters{margin-top:12px;padding-top:12px}.wc-filters input,.wc-filters select{min-height:36px}.wc-panel-heading{align-items:center}
+
+/* In-page tabs only: preserve the active-page visibility contract. */
+:root{--tab-ink:#88143f;--tab-tint:#fff4f8;--tab-line:#d8a7b9;--tab-shadow:0 5px 15px rgb(129 18 62 / 16%)}
+html[data-theme=dark]{--tab-ink:#f3a9c6;--tab-tint:#332336;--tab-line:#aa6480;--tab-shadow:0 5px 18px rgb(168 42 91 / 24%)}
+html.workspace-experience-ready #workspaceHeader .workspace-tab,.section.active [role=tab],.section.active .imprest-workspace-tab{border-radius:10px;outline-offset:3px}
+html.workspace-experience-ready #workspaceHeader .workspace-tab[aria-selected=true],.section.active [role=tab][aria-selected=true],.section.active .imprest-workspace-tab.active,.section.active .wc-segment button[aria-pressed=true]{color:var(--tab-ink);background:var(--tab-tint);border:1px solid var(--tab-line);font-weight:700;box-shadow:var(--tab-shadow),inset 0 -2px var(--tab-ink)}
+.section.active .wc-tab[aria-selected=true] .wc-count{background:var(--surface);color:var(--tab-ink)}
+html.workspace-experience-ready #workspaceHeader .workspace-tab:hover,.section.active [role=tab]:hover,.section.active .imprest-workspace-tab:hover{color:var(--tab-ink);border-color:var(--tab-line)}
+html.workspace-experience-ready #workspaceHeader .workspace-tab:focus-visible,.section.active [role=tab]:focus-visible,.section.active .wc-segment button:focus-visible{outline:2px solid var(--tab-ink)}
+#workspaceHeader .workspace-tabs{padding-top:6px;padding-bottom:12px}.section.active .wc-tabs{padding-block:5px 10px}
+@media print{html.workspace-experience-ready #workspaceHeader .workspace-tab,.section.active [role=tab],.section.active .wc-segment button{box-shadow:none}}

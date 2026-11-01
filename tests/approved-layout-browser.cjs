@@ -4,6 +4,14 @@ const assert=require('node:assert/strict');const {chromium}=require(process.env.
  assert.equal(await p.locator('#workspaceHeader h1').isVisible(),false,'No duplicate large page title');
  assert.equal(await p.locator('.wc-meta #wcWorkdayStatus').count(),1);assert.equal(await p.locator('#wcResults .wc-panel-heading #wcResultCount').count(),1);
  const metrics=await p.locator('#workcenterSummary').boundingBox(),filters=await p.locator('#wcSearch').boundingBox();assert.ok(metrics.y<filters.y,'Approved compact indicators precede work filters');
+
+ for(const theme of ['light','dark']){
+  await p.evaluate(theme=>{document.documentElement.dataset.theme=theme;renderThemeControls();},theme);await p.waitForTimeout(200);
+  for(const selector of ['#workspaceHeader [aria-selected=true]','#workcenter .wc-tab[aria-selected=true]']){
+   const style=await p.locator(selector).evaluate(el=>({color:getComputedStyle(el).color,shadow:getComputedStyle(el).boxShadow,weight:getComputedStyle(el).fontWeight}));
+   assert.equal(style.color,theme==='light'?'rgb(136, 20, 63)':'rgb(243, 169, 198)');assert.notEqual(style.shadow,'none');assert.ok(Number(style.weight)>=600);
+  }
+ }
  for(const mode of [{width:1680,theme:'light',lang:'ar'},{width:1680,theme:'dark',lang:'en'},{width:390,theme:'light',lang:'ar'},{width:390,theme:'dark',lang:'en'}]){
   await p.setViewportSize({width:mode.width,height:1120});
   await p.evaluate(mode=>{if(currentLang!==mode.lang)toggleLanguage();document.documentElement.dataset.theme=mode.theme;renderThemeControls();},mode);
