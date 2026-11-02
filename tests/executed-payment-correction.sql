@@ -21,5 +21,7 @@ do $$declare cfo uuid;banker uuid;account uuid;payment uuid;balance_now numeric;
  if (select count(*) from public.audit_log where action='EXECUTED_PAYMENT_AMOUNT_CORRECTED' and entity_id=payment::text)<>2 then raise exception 'MISSING_CORRECTION_AUDIT';end if;
  begin perform public.cfo_correct_executed_payment_amount(payment,900,0,'Invalid zero correction amount');raise exception 'ZERO_ACCEPTED';exception when others then if sqlerrm<>'PAYMENT_CORRECTION_INVALID_AMOUNT' then raise;end if;end;
  begin perform public.cfo_correct_executed_payment_amount(payment,900,800,'short');raise exception 'REASON_NOT_ENFORCED';exception when others then if sqlerrm<>'PAYMENT_CORRECTION_REASON_REQUIRED' then raise;end if;end;
+ perform public.cfo_correct_executed_payment_amount(payment,900,20000,'Allow negative recorded bank balance');
+ if (select balance from public.bank_accounts where id=account)<>-10000 then raise exception 'NEGATIVE_BALANCE_CORRECTION_FAILED';end if;
  if has_function_privilege('anon','public.cfo_correct_executed_payment_amount(uuid,numeric,numeric,text)','execute') then raise exception 'ANON_CORRECTION_ACCESS';end if;
 end$$;
