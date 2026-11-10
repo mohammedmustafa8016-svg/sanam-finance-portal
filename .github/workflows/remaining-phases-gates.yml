@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   unit-contract-browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
           name: operations-browser-evidence
           path: tests/*.png
   full-local-supabase:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
       fail-fast: false
