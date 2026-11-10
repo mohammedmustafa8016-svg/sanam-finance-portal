@@ -7,5 +7,31 @@ const assert=require('node:assert/strict');const {chromium}=require(process.env.
  assert.equal(await page.locator('#dailyMailStatus.wc-error').count(),0,'Persisted acceptance clears false error after lost response');assert.match(await page.locator('#dailyMailStatus').textContent(),/سجل النظام/);await page.screenshot({path:'tests/daily-payment-mail-preview.png'});
  for(const role of ['CFO','Supervisor','BankAccountant','GLAccountant','ARAccountant','APAccountant','Viewer']){const allowed=await page.evaluate(role=>{profile={...profile,role};permissionMap={};applyAccess();return canPage('dailyemail');},role);assert.equal(allowed,['Supervisor','BankAccountant'].includes(role),role);}
  await page.evaluate(()=>{profile={...profile,role:'CFO'};permissionMap={};applyAccess();});assert.equal(await page.locator('#dailyMailSettingsBtn').isVisible(),false,'Settings stays on its authorized administration page');await page.evaluate(()=>openPage('automation','الإدارة'));assert.equal(await page.locator('#dailyMailSettingsBtn').isVisible(),true);
- assert.deepEqual(errors,[]);console.log('PASS: preview before connection, approved report display, escaped content, PKCE callback flow, connection never sends, explicit send/accepted wording, duplicate click block and seven roles. No real mail sent.');
+ await page.evaluate(()=>{
+  const original=sb.rpc.bind(sb);
+  window.templateWrites=[];
+  sb.rpc=async(name,params)=>{
+   if(name==='get_uncertain_daily_payment_mail')return {data:[]};
+   if(name==='save_daily_payment_mail_template'){templateWrites.push(params);return {data:null};}
+   return original(name,params);
+  };
+ });
+ await page.locator('#dailyMailSettingsBtn').click();
+ await page.locator('#dailyMailTemplateEdit').click();
+ await page.locator('#dailyMailTemplate-subject').fill('تقرير {{date}}');
+ await page.locator('#dailyMailTemplate-intro').fill('دفعات {{day}}\n<img src=x>');
+ assert.match(await page.locator('#dailyMailTemplatePreviewSubject').textContent(),/^تقرير \d{4}-\d{2}-\d{2}$/);
+ assert.match(await page.locator('#dailyMailTemplatePreview').textContent(),/<img src=x>/);
+ assert.equal(await page.locator('#dailyMailTemplatePreview img').count(),0);
+ assert.equal(await page.locator('#dailyMailTemplatePreview table').count(),1);
+ await page.locator('#dailyMailTemplateSave').click();
+ await page.waitForFunction(()=>templateWrites.length===1);
+ await page.locator('#dailyMailTemplateReset').click();
+ await page.locator('#dailyMailTemplateSave').click();
+ await page.waitForFunction(()=>templateWrites.length===2);
+ const [saved,restored]=await page.evaluate(()=>templateWrites);
+ assert.equal(saved.p_template.subject,'تقرير {{date}}');
+ assert.deepEqual(restored,{p_template:null,p_expected:saved.p_template});
+ assert.equal(await page.evaluate(()=>mailRequests.length),1,'Editing and restoring the template never sends mail');
+ assert.deepEqual(errors,[]);console.log('PASS: Outlook preview, dispatch reconciliation, CFO template editing and restore, safe interpolation and no automatic send.');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

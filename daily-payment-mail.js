@@ -17,7 +17,7 @@
   const results=await Promise.all([sb.rpc('get_daily_payment_mail_config'),sb.rpc('get_daily_payment_mail_preview',{p_report_date:date}),sb.from('daily_payment_mail_dispatches').select('id,status,report_date,created_at,snapshot_hash').eq('sender_id',user).eq('report_date',date).order('created_at',{ascending:false}).limit(20)]);
   if(token!==state.load||user!==profile?.id)return;for(const r of results)if(r.error)throw r.error;
   state.config=results[0].data;state.preview=results[1].data;const history=results[2].data||[];
-  const uncertain=history.some(r=>['Sending','Unknown'].includes(r.status)),alreadyAccepted=history.some(r=>r.status==='Accepted'&&r.snapshot_hash===state.preview.snapshot_hash);state.blocked=uncertain||alreadyAccepted;
+  const uncertain=history.some(r=>['Sending','Unknown'].includes(r.status)),alreadyAccepted=state.preview.already_accepted===true||history.some(r=>r.status==='Accepted'&&r.snapshot_hash===state.preview.snapshot_hash);state.blocked=uncertain||alreadyAccepted;
   const route=document.getElementById('dailyMailRouting');route.replaceChildren();for(const [label,value] of [[text('الموضوع','Subject'),state.preview.subject],[text('المرسل','Sender'),state.preview.sender.email],['To',state.preview.to.join('; ')],['Cc',state.preview.cc.join('; ')]]){const p=document.createElement('p');p.textContent=`${label}: ${value||'—'}`;route.append(p);}
   document.getElementById('dailyMailPreview').innerHTML=SanamDailyMailTemplate.message(state.preview);
   document.getElementById('dailyMailHistory').textContent=history.length?text('محاولات هذا التاريخ: ','Attempts for this date: ')+history.map(h=>({Accepted:text('قَبِل Outlook الإرسال','Accepted by Outlook'),Sending:text('جارٍ التحقق','Awaiting confirmation'),Unknown:text('النتيجة غير مؤكدة','Result uncertain'),Failed:text('لم يُقبل الإرسال','Send rejected')}[h.status]||h.status)).join(' · '):'';
@@ -37,10 +37,89 @@
   const response=await fetch('/api/daily-payment-email',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({date:snapshot.date,snapshot_hash:snapshot.snapshot_hash,outlook_token:auth.token})});const result=await response.json();if(profile?.id!==user)return;if(!response.ok){if(result.status==='Unknown'||result.error==='MAIL_PREVIOUS_ATTEMPT_UNCERTAIN')state.blocked=true;throw new Error(result.error);}state.blocked=true;status(result.duplicate?text('هذا التقرير مقبول سابقًا لدى Outlook؛ لم يُرسل مرة ثانية.','Outlook already accepted this report; no duplicate was sent.'):text('قَبِل Outlook التقرير للإرسال. هذا تأكيد قبول، وليس تأكيد تسليم للمستلمين.','Outlook accepted the report for sending. This confirms acceptance, not recipient delivery.'));
  }catch(e){if(user===profile?.id){if(attempted){state.blocked=true;status(text('جارٍ التحقق من نتيجة الإرسال المسجلة…','Checking the recorded send result…'));let accepted=false;try{const r=await sb.from('daily_payment_mail_dispatches').select('id,status').eq('sender_id',user).eq('report_date',snapshot.date).eq('snapshot_hash',snapshot.snapshot_hash).limit(1);accepted=!r.error&&r.data?.[0]?.status==='Accepted';}catch{}if(user!==profile?.id)return;if(accepted){status(text('قَبِل Outlook التقرير للإرسال وتم تأكيد ذلك من سجل النظام. هذا ليس تأكيد تسليم للمستلمين.','Outlook accepted the report for sending, confirmed by the system record. This is not confirmation of recipient delivery.'));}else status(errorMessage(e.message in errors?e.message:'MAIL_PREVIOUS_ATTEMPT_UNCERTAIN'),true);}else status(errorMessage(e.message),true);}}finally{if(user===profile?.id){state.busy=false;document.getElementById('dailyMailDate').disabled=false;document.getElementById('dailyMailRefresh').disabled=false;controls();}}}
  window.openDailyMailSettings=async function(){if(profile?.role!=='CFO')return;const [{data:c,error},{data:uncertain,error:queueError}]=await Promise.all([sb.rpc('get_daily_payment_mail_config'),sb.rpc('get_uncertain_daily_payment_mail')]);if(error||queueError)return alert((error||queueError).message);showModal(text('إعداد البريد اليومي','Daily email setup'),`<p class="muted">${text('معرّفا التطبيق والمستأجر من مسؤول Microsoft 365. لا تدخل كلمة مرور أو مفتاحًا سريًا.','Use the application and tenant IDs supplied by Microsoft 365 administration. Do not enter a password or client secret.')}</p><div class="modal-grid">${input('mailClientId','Application (client) ID',c.client_id||'')}${input('mailTenantId','Directory (tenant) ID',c.tenant_id||'')}</div><label>To</label><textarea id="mailTo">${esc((c.to||[]).join('; '))}</textarea><label>Cc</label><textarea id="mailCc">${esc((c.cc||[]).join('; '))}</textarea><label class="inbox-check"><input id="mailEnabled" type="checkbox" ${c.enabled?'checked':''}>${text('تفعيل الإرسال بعد استكمال الربط','Enable sending after setup')}</label><div id="mailConfigError" class="wc-error hidden"></div><button id="mailConfigSave" class="btn primary">${text('حفظ الإعدادات','Save settings')}</button>`);const queue=document.createElement('div');queue.className='daily-mail-reconciliation';
-    for(const row of uncertain||[]){const box=document.createElement('div');box.className='card';const heading=document.createElement('p');heading.textContent=`${row.report_date} · ${row.sender_name} · ${row.status}`;const note=document.createElement('textarea');note.placeholder=text('تحقق مع صاحب البريد من العناصر المرسلة ثم وثق نتيجة التحقق (20 حرفًا على الأقل).','Verify Sent Items with the mailbox owner and document the evidence (at least 20 characters).');const sent=document.createElement('button'),notSent=document.createElement('button');for(const [button,value,label] of [[sent,true,text('تم التحقق: أُرسل','Verified: sent')],[notSent,false,text('تم التحقق: لم يُرسل','Verified: not sent')]]){button.type='button';button.className='btn';button.textContent=label;button.onclick=async()=>{sent.disabled=notSent.disabled=true;const r=await sb.rpc('resolve_daily_payment_mail_attempt',{p_dispatch_id:row.dispatch_id,p_confirmed_sent:value,p_reason:note.value});if(r.error){alert(r.error.message);sent.disabled=notSent.disabled=false;}else box.remove();};}box.append(heading,note,sent,notSent);queue.append(box);}document.getElementById('mailConfigSave').after(queue);
+    for(const row of uncertain||[]){const box=document.createElement('div');box.className='card';const heading=document.createElement('p');heading.textContent=`${row.report_date} · ${row.sender_name} · ${row.status}`;const note=document.createElement('textarea');note.placeholder=text('تحقق مع صاحب البريد من العناصر المرسلة ثم وثق نتيجة التحقق (20 حرفًا على الأقل).','Verify Sent Items with the mailbox owner and document the evidence (at least 20 characters).');const sent=document.createElement('button'),notSent=document.createElement('button');for(const [button,value,label] of [[sent,true,text('تم التحقق: أُرسل','Verified: sent')],[notSent,false,text('تم التحقق: لم يُرسل','Verified: not sent')]]){button.type='button';button.className='btn';button.textContent=label;button.onclick=async()=>{sent.disabled=notSent.disabled=true;const r=await sb.rpc('resolve_daily_payment_mail_attempt',{p_dispatch_id:row.dispatch_id,p_confirmed_sent:value,p_reason:note.value});if(r.error){alert(r.error.message);sent.disabled=notSent.disabled=false;}else box.remove();};}box.append(heading,note,sent,notSent);queue.append(box);}const editTemplate=document.createElement('button');
+    editTemplate.id='dailyMailTemplateEdit';editTemplate.type='button';editTemplate.className='btn';
+    editTemplate.textContent=text('تعديل صيغة الرسالة','Edit email template');
+    editTemplate.onclick=()=>openTemplateEditor(c.template??null);
+    document.getElementById('mailConfigSave').after(editTemplate,queue);
     document.getElementById('mailConfigSave').onclick=async()=>{const button=document.getElementById('mailConfigSave');button.disabled=true;try{const list=id=>document.getElementById(id).value.split(/[;,\n]+/).map(s=>s.trim()).filter(Boolean);const r=await sb.rpc('configure_daily_payment_mail',{p_client_id:document.getElementById('mailClientId').value.trim()||null,p_tenant_id:document.getElementById('mailTenantId').value.trim()||null,p_to:list('mailTo'),p_cc:list('mailCc'),p_enabled:document.getElementById('mailEnabled').checked});if(r.error)throw r.error;closeModal();}catch(e){const box=document.getElementById('mailConfigError');box.textContent=e.message;box.classList.remove('hidden');button.disabled=false;}};};
+ function openTemplateEditor(savedTemplate){
+  if(profile?.role!=='CFO')return;
+  const renderer=SanamDailyMailTemplate;
+  const fields=[
+   ['subject',text('موضوع البريد','Subject'),200],
+   ['greeting',text('التحية','Greeting'),500],
+   ['intro',text('المقدمة','Introduction'),2000],
+   ['closing',text('الخاتمة','Closing'),1000]
+  ];
+  const values={...renderer.defaults,...savedTemplate};
+  showModal(text('صيغة بريد المدفوعات المنفذة','Executed payment email template'),`
+   <p class="muted">${text('استخدم {{date}} لإدراج تاريخ التقرير، و{{day}} لإدراج اسم اليوم في نص الرسالة.','Use {{date}} for the report date and {{day}} for the weekday in the message body.')}</p>
+   ${fields.map(([key,label,max])=>`<div>
+    <label for="dailyMailTemplate-${key}">${label}</label>
+    ${key==='subject'
+     ?`<input id="dailyMailTemplate-${key}" maxlength="${max}" value="${esc(values[key])}">`
+     :`<textarea id="dailyMailTemplate-${key}" maxlength="${max}" rows="2">${esc(values[key])}</textarea>`}
+   </div>`).join('')}
+   <h4>${text('معاينة ببيانات تجريبية','Preview with sample data')}</h4>
+   <div id="dailyMailTemplatePreviewSubject"></div>
+   <div id="dailyMailTemplatePreview" class="daily-mail-paper" style="overflow:auto"></div>
+   <p id="dailyMailTemplateStatus" role="status" aria-live="polite"></p>
+   <div class="row">
+    <button id="dailyMailTemplateSave" type="button" class="btn primary">${text('حفظ الصيغة','Save template')}</button>
+    <button id="dailyMailTemplateReset" type="button" class="btn">${text('استعادة الصيغة الأصلية','Restore original template')}</button>
+   </div>`);
+  const byId=id=>document.getElementById(id);
+  const editors=fields.map(([key])=>[key,byId('dailyMailTemplate-'+key)]);
+  const save=byId('dailyMailTemplateSave'),resetButton=byId('dailyMailTemplateReset');
+  const notice=byId('dailyMailTemplateStatus'),body=byId('dailyMailTemplatePreview'),subject=byId('dailyMailTemplatePreviewSubject');
+  const date=riyadhToday();
+  const sample={
+   date,
+   items:[{due_date:date,company:text('شركة تجريبية','Sample company'),beneficiary:text('مستفيد تجريبي','Sample beneficiary'),amount:1250,bank_account:text('حساب تجريبي','Sample account'),purpose:text('دفعة تجريبية','Sample payment')}],
+   total:1250,sender:{name:text('مرسل تجريبي','Sample sender'),role:'Supervisor',email:'sender@example.com'}
+  };
+  const draft=()=>Object.fromEntries(editors.map(([key,field])=>[key,field.value.trim()]));
+  const render=()=>{
+   const template=draft();
+   subject.textContent=renderer.subject(template,date);
+   body.innerHTML=renderer.message({...sample,template});
+  };
+  for(const [,field] of editors)field.addEventListener('input',render);
+  resetButton.onclick=()=>{
+   for(const [key,field] of editors)field.value=renderer.defaults[key];
+   notice.textContent=text('اضغط حفظ الصيغة لاعتماد النص الأصلي.','Save the template to restore the original text.');
+   render();
+  };
+  save.onclick=async()=>{
+   if(profile?.role!=='CFO')return;
+   const template=draft();
+   if(!template.subject){
+    notice.textContent=text('أدخل موضوع البريد.','Enter an email subject.');
+    return;
+   }
+   const value=Object.keys(renderer.defaults).every(key=>renderer.defaults[key]===template[key])?null:template;
+   save.disabled=resetButton.disabled=true;
+   for(const [,field] of editors)field.disabled=true;
+   try{
+    const result=await sb.rpc('save_daily_payment_mail_template',{p_template:value,p_expected:savedTemplate??null});
+    if(result.error)throw result.error;
+    savedTemplate=value;
+    notice.textContent=text('تم حفظ صيغة البريد.','Email template saved.');
+   }catch(error){
+    notice.textContent=error.message==='MAIL_TEMPLATE_CHANGED_REFRESH'
+     ?text('تغيرت الصيغة في جلسة أخرى. أعد فتح إعداد البريد لقراءة آخر صيغة.','The template changed in another session. Reopen email setup to load it.')
+     :text('تعذر حفظ الصيغة. راجع الموضوع وطول النص وحاول مجددًا.','Could not save the template. Check the subject and text length and retry.');
+   }finally{
+    save.disabled=resetButton.disabled=false;
+    for(const [,field] of editors)field.disabled=false;
+   }
+  };
+  render();
+ }
  const previousOpen=openPage;openPage=function(id,...args){const result=previousOpen(id,...args);if(id==='dailyemail'&&permitted()){if(state.user!==profile.id)reset();shell();void load();}return result;};
  function settingsButton(){if(state.user&&state.user!==profile?.id)reset();const area=document.querySelector('#automation>.row');if(!area)return;let button=document.getElementById('dailyMailSettingsBtn');if(!button){button=document.createElement('button');button.id='dailyMailSettingsBtn';button.className='btn';button.type='button';button.onclick=openDailyMailSettings;area.append(button);}button.hidden=profile?.role!=='CFO';button.textContent=text('إعداد البريد اليومي','Daily email setup');}
  for(const name of ['applyAccess','applyLanguage']){const previous=window[name];window[name]=function(...args){const result=previous.apply(this,args);settingsButton();if(name==='applyLanguage'&&section.classList.contains('active')&&permitted()){shell();void load();}return result;};}
  const previousAuth=showAuth;showAuth=function(...args){reset();state.auth=null;return previousAuth.apply(this,args);};settingsButton();
 })();
+

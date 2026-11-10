@@ -1,5 +1,5 @@
 do $$begin if exists(select 1 from public.profiles where email not like '%@local.invalid') then raise exception 'LOCAL_FIXTURE_REQUIRED';end if;end$$;
-do $$declare cfo uuid;sup uuid;banker uuid;account uuid;payment uuid;preview jsonb;claim jsonb;duplicate jsonb;date_today date:=(now() at time zone 'Asia/Riyadh')::date;u record;begin
+do $$declare cfo uuid;sup uuid;banker uuid;account uuid;payment uuid;preview jsonb;claim jsonb;duplicate jsonb;old_hash text;template jsonb:='{"subject":"Approved payments {{date}}","greeting":"Hello","intro":"New introduction","closing":"Regards"}';date_today date:=(now() at time zone 'Asia/Riyadh')::date;u record;begin
  select id into cfo from public.profiles where role='CFO';select id into sup from public.profiles where role='Supervisor';select id into banker from public.profiles where role='BankAccountant';
  perform set_config('request.jwt.claim.sub',cfo::text,true);
  perform public.configure_daily_payment_mail('11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222',array['recipient@local.invalid'],'{}',true);
@@ -20,6 +20,38 @@ do $$declare cfo uuid;sup uuid;banker uuid;account uuid;payment uuid;preview jso
  perform public.finish_daily_payment_mail((claim->>'id')::uuid,'Accepted','fixture-provider-request',null,'local-fixture-dispatch-secret');
  duplicate:=public.claim_daily_payment_mail(date_today,preview->>'snapshot_hash',gen_random_uuid(),'local-fixture-dispatch-secret');
  if (duplicate->>'duplicate')::boolean is distinct from true or duplicate->>'id'<>claim->>'id' then raise exception 'MAIL_DUPLICATE_NOT_SUPPRESSED';end if;
+ old_hash:=preview->>'snapshot_hash';
+ begin
+  perform public.save_daily_payment_mail_template(template,null);
+  raise exception 'NON_CFO_TEMPLATE_WRITE';
+ exception when others then if sqlerrm<>'CFO_REQUIRED' then raise;end if;end;
+ perform set_config('request.jwt.claim.sub',cfo::text,true);
+ perform public.save_daily_payment_mail_template(template,null);
+ begin
+  perform public.save_daily_payment_mail_template(null,null);
+  raise exception 'STALE_TEMPLATE_WRITE';
+ exception when others then if sqlerrm<>'MAIL_TEMPLATE_CHANGED_REFRESH' then raise;end if;end;
+ perform set_config('request.jwt.claim.sub',banker::text,true);
+ preview:=public.get_daily_payment_mail_preview(date_today);
+ if preview->>'subject' is distinct from ('Approved payments '||date_today::text)
+    or preview->'template' is distinct from template
+    or preview->>'snapshot_hash'=old_hash
+    or (preview->>'already_accepted')::boolean is distinct from true
+ then raise exception 'WRONG_TEMPLATE_PREVIEW';end if;
+ begin
+  perform public.claim_daily_payment_mail(date_today,old_hash,gen_random_uuid(),'local-fixture-dispatch-secret');
+  raise exception 'STALE_TEMPLATE_PREVIEW_ACCEPTED';
+ exception when others then if sqlerrm<>'MAIL_PREVIEW_CHANGED_REFRESH' then raise;end if;end;
+ duplicate:=public.claim_daily_payment_mail(date_today,preview->>'snapshot_hash',gen_random_uuid(),'local-fixture-dispatch-secret');
+ if (duplicate->>'duplicate')::boolean is distinct from true or duplicate->>'id'<>claim->>'id' then
+  raise exception 'TEMPLATE_CHANGE_RESENDS_REPORT';
+ end if;
+ perform set_config('request.jwt.claim.sub',cfo::text,true);
+ perform public.save_daily_payment_mail_template(null,template);
+ perform set_config('request.jwt.claim.sub',banker::text,true);
+ if public.get_daily_payment_mail_preview(date_today)->>'snapshot_hash' is distinct from old_hash then
+  raise exception 'ORIGINAL_TEMPLATE_NOT_RESTORED';
+ end if;
  update public.payments set purpose='Updated approved purpose' where id=payment;preview:=public.get_daily_payment_mail_preview(date_today);
  claim:=public.claim_daily_payment_mail(date_today,preview->>'snapshot_hash',gen_random_uuid(),'local-fixture-dispatch-secret');
  perform public.finish_daily_payment_mail((claim->>'id')::uuid,'Unknown',null,'SEND_RESULT_UNCONFIRMED','local-fixture-dispatch-secret');

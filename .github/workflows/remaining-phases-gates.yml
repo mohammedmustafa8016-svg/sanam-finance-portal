@@ -72,6 +72,7 @@ jobs:
             rm supabase/migrations/20261031165315_delegated_outlook_daily_payment_mail.sql
             rm supabase/migrations/20261101060328_reserve_allocation_concurrency_hardening.sql
             rm supabase/migrations/20261101131722_daily_mail_config_explicit_singleton_update.sql
+            rm supabase/migrations/20261110132728_configurable_daily_payment_mail_template.sql
           fi
           sha256sum supabase/migrations/*.sql > migration-manifest.txt
       - run: npm ci --prefix tests/harness --ignore-scripts --no-audit --no-fund

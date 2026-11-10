@@ -5,14 +5,24 @@ async function scenario(options={}){const calls=[],finish=[];global.fetch=async(
  if(url.includes('/auth/v1/user'))return response(200,{id:'user'});
  if(url.includes('/rpc/get_daily_payment_mail_preview'))return response(200,options.stale?{...snapshot,snapshot_hash:'b'.repeat(64)}:snapshot);
  if(url.includes('/v1.0/me?'))return response(200,{mail:options.wrongSender?'other@local.invalid':snapshot.sender.email});
- if(url.includes('/rpc/claim_daily_payment_mail'))return response(200,{id:'dispatch',snapshot,duplicate:!!options.duplicate});
+ if(url.includes('/rpc/claim_daily_payment_mail'))return response(200,{id:'dispatch',snapshot:options.customSnapshot||snapshot,duplicate:!!options.duplicate});
  if(url.includes('/rpc/finish_daily_payment_mail')){finish.push(body.p_status);if(options.auditFailure)return response(503,{message:'Audit unavailable'});return response(200,null);}
- if(url.includes('/me/sendMail')){assert.equal(body.message.toRecipients[0].emailAddress.address,'recipient@local.invalid');assert.doesNotMatch(body.message.body.content,/<img/);if(options.networkFailure)throw new Error('network uncertain');return response(options.graphStatus||202,null,{'request-id':'provider-request'});}
+ if(url.includes('/me/sendMail')){
+  assert.equal(body.message.toRecipients[0].emailAddress.address,'recipient@local.invalid');
+  assert.doesNotMatch(body.message.body.content,/<img/);
+  if(options.customSnapshot){
+   assert.equal(body.message.subject,'Approved payments 2026-10-29');
+   assert.match(body.message.body.content,/Custom text 2026-10-29<br>&lt;img/);
+  }
+  if(options.networkFailure)throw new Error('network uncertain');
+  return response(options.graphStatus||202,null,{'request-id':'provider-request'});
+ }
  throw new Error('Unexpected test URL');};
  const req={method:options.method||'POST',headers:{origin:options.origin||'https://sanam-finance-cloud-pilot-mohammedmustafa8016-6001.vercel.app',authorization:'Bearer fixture-session'},body:{date:snapshot.date,snapshot_hash:hash,outlook_token:'fixture-outlook-token'}},res={setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;return this;}};
  await handler(req,res);return {code:res.code,data:res.data,calls,finish};}
 (async()=>{const previous=global.fetch;process.env.SANAM_MAIL_DISPATCH_SECRET='local-test-dispatch-secret';try{
  let r=await scenario();assert.equal(r.code,200);assert.equal(r.data.status,'Accepted');assert.deepEqual(r.finish,['Accepted']);
+ r=await scenario({customSnapshot:{...snapshot,subject:'Approved payments 2026-10-29',template:{subject:'Approved payments {{date}}',greeting:'Hello',intro:'Custom text {{date}}\n<img src=x>',closing:'Regards'}}});assert.equal(r.code,200);
  r=await scenario({wrongSender:true});assert.equal(r.code,403);assert.equal(r.calls.some(u=>u.includes('claim_daily')),false);
  r=await scenario({stale:true});assert.equal(r.code,409);assert.equal(r.calls.some(u=>u.includes('graph.microsoft.com')),false);
  r=await scenario({duplicate:true});assert.equal(r.data.duplicate,true);assert.equal(r.calls.some(u=>u.includes('/sendMail')),false);
