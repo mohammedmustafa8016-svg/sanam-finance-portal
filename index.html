@@ -425,8 +425,64 @@ async function savePendingPayment(id){const p=payments.find(x=>x.id===id);if(!p)
 function openResolvePendingPayment(id){if(profile.role!=='GLAccountant')return;const p=payments.find(x=>x.id===id);if(!p||p.status!=='معلقة')return;showModal(displayText('استكمال التسجيل'),`<div class="note">${esc(p.company)} — ${esc(p.beneficiary)} — ${moneyHtml(p.amount)}<br>${displayText('المبلغ المعلق')}: ${moneyHtml(p.pending_amount??p.amount)}</div><label style="margin-top:10px">${displayText('ملاحظة حل التعليق')} *</label><textarea id="pend_resolution_note" rows="4"></textarea><div class="row" style="margin-top:14px"><button class="btn success" onclick="resolvePendingPayment('${id}')">${displayText('استكمال التسجيل وإرسالها للترحيل')}</button></div>`)}
 async function resolvePendingPayment(id){const note=(val('pend_resolution_note')||'').trim();if(!note)return alert(displayText('ملاحظة حل التعليق إلزامية.'));const {error}=await sb.rpc('resolve_payment_pending_and_register',{p_payment_id:id,p_resolution_note:note});if(error)return alert(error.message);closeModal();await reloadAll();openPage('executed',displayText('الاعتمادات المنفذة'))}
 async function finalizeRegisteredPayment(id,action){if(!["Supervisor","CFO"].includes(profile.role)||action!=='Posted')return;const {error}=await sb.rpc('supervisor_finalize_registered_payment',{p_payment_id:id,p_action:'Posted',p_reason:null,p_pending_action:null,p_pending_owner_id:null,p_follow_up_date:null});if(error)return alert(error.message);await reloadAll()}
-function openCfoStatusOverride(id){if(profile.role!=='CFO')return;const p=payments.find(x=>x.id===id);if(!p)return;showModal(displayText('تغيير الحالة بواسطة CFO'),`${select('cfo_override_status','حالة جديدة',['بانتظار مراجعة المشرف','بانتظار اعتماد CFO','معتمد للدفع','منفذ','تم التسجيل','مرفوض','موقوف'],p.status)}<div class="note" style="margin-top:10px">${displayText('التعليق والترحيل النهائي يتمان من الأزرار المخصصة لهما لضمان حفظ التبرير والملاحظات وفصل الصلاحيات.')}</div><label style="margin-top:10px">${displayText('سبب التغيير')} *</label><textarea id="cfo_override_reason" rows="3"></textarea><div class="row" style="margin-top:14px"><button class="btn primary" onclick="saveCfoStatusOverride('${id}')">${displayText('حفظ')}</button></div>`)}
-async function saveCfoStatusOverride(id){const reason=(val('cfo_override_reason')||'').trim();if(!reason)return alert(currentLang==='en'?'Change reason is required.':'سبب التغيير إلزامي.');const {error}=await sb.rpc('cfo_override_payment_status',{p_payment_id:id,p_status:val('cfo_override_status'),p_reason:reason});if(error)return alert(error.message);closeModal();await reloadAll()}
+function openCfoStatusOverride(id) {
+ if (profile.role !== 'CFO') return;
+ const payment = payments.find(row => row.id === id);
+ if (!payment) return;
+ const t = (ar, en) => currentLang === 'en' ? en : ar;
+ showModal(displayText('تغيير الحالة بواسطة CFO'), `
+  ${select('cfo_override_status', 'حالة جديدة', ['بانتظار مراجعة المشرف','بانتظار اعتماد CFO','معتمد للدفع','منفذ','تم التسجيل','مرفوض','موقوف'], payment.status)}
+  <div class="note" style="margin-top:10px">${displayText('التعليق والترحيل النهائي يتمان من الأزرار المخصصة لهما لضمان حفظ التبرير والملاحظات وفصل الصلاحيات.')}</div>
+  <div id="cfoReturnBankEffect" class="hidden">
+   <p class="note">${t('استخدم الإرجاع بعد التحقق من عدم تنفيذ التحويل. اختر أثره على الرصيد بعد مطابقته مع كشف البنك.','Return the payment after confirming the transfer failed. Select its balance effect after checking the bank statement.')}</p>
+   ${select('cfo_return_balance', t('أثر الإرجاع على رصيد البنك','Bank balance effect'), [
+    {value:'',label:t('اختر أثر الإرجاع','Select the balance effect')},
+    {value:'reverse',label:t('الخصم ما زال قائمًا، أعد المبلغ إلى الرصيد','The debit remains, reverse it in the balance')},
+    {value:'reconciled',label:t('الرصيد مسوّى بالفعل وفق كشف البنك','The balance has already been reconciled')}
+   ])}
+  </div>
+  <label style="margin-top:10px">${displayText('سبب التغيير')} *</label>
+  <textarea id="cfo_override_reason" rows="3"></textarea>
+  <div class="row" style="margin-top:14px"><button id="cfoOverrideSave" class="btn primary" onclick="saveCfoStatusOverride('${id}')">${displayText('حفظ')}</button></div>
+ `);
+ const status = document.getElementById('cfo_override_status');
+ const toggleBankEffect = () => document.getElementById('cfoReturnBankEffect').classList.toggle('hidden',
+  !payment.executed_at || status.value !== 'بانتظار مراجعة المشرف');
+ status.addEventListener('change', toggleBankEffect);
+ toggleBankEffect();
+}
+async function saveCfoStatusOverride(id) {
+ const t = (ar, en) => currentLang === 'en' ? en : ar;
+ const reason = val('cfo_override_reason').trim();
+ if (!reason) return alert(t('سبب التغيير إلزامي.','Change reason is required.'));
+ const status = val('cfo_override_status');
+ const payment = payments.find(row => row.id === id);
+ const restart = Boolean(payment?.executed_at && status === 'بانتظار مراجعة المشرف');
+ const mode = val('cfo_return_balance');
+ if (restart && !mode) return alert(t('حدد أثر الإرجاع على رصيد البنك.','Select the effect on the bank balance.'));
+ const save = document.getElementById('cfoOverrideSave');
+ if (save?.disabled) return;
+ if (save) save.disabled = true;
+ const args = {p_payment_id:id,p_status:status,p_reason:reason};
+ try {
+  const {error} = restart
+   ? await sb.rpc('cfo_override_payment_status_v2',{...args,p_reverse_bank_effect:mode==='reverse'})
+   : await sb.rpc('cfo_override_payment_status',args);
+  if (error) throw error;
+  closeModal();
+  await reloadAll();
+ } catch (error) {
+  const messages = {
+   PAYMENT_RESTART_REQUIRES_ACCOUNTING_REVERSAL: t('سوِّ القيد المحاسبي قبل إرجاع الدفعة.','Reconcile the accounting entry before restarting the payment.'),
+   PAYMENT_RESTART_REQUIRES_LINKED_RECONCILIATION: t('سوِّ التمويل أو الاسترداد المرتبط قبل إرجاع الدفعة.','Reconcile linked funding or recovery before restarting the payment.'),
+   PAYMENT_RESTART_REQUIRES_APPROVALS: t('تحتاج الدفعة إلى الاعتماد من جديد قبل التنفيذ.','The payment must be approved again before execution.'),
+   PAYMENT_RESTART_BANK_EFFECT_REQUIRED: t('حدّث قائمة المدفوعات ثم حدد أثر الإرجاع على الرصيد.','Refresh the payments list and select the balance effect.')
+  };
+  alert(messages[error.message] || error.message);
+ } finally {
+  if (save) save.disabled = false;
+ }
+}
 
 async function deleteRequestedPayment(id){
  if(!["CFO","Supervisor","BankAccountant"].includes(profile.role))return;
