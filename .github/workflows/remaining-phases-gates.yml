@@ -75,6 +75,8 @@ jobs:
             rm supabase/migrations/20261110132728_configurable_daily_payment_mail_template.sql
             rm supabase/migrations/20261111062736_repair_payment_restart_and_reserve_posting.sql
             rm tests/payment-restart-reserve-posting.sql
+            rm supabase/migrations/20261115075551_payment_operation_types.sql
+            rm tests/payment-operation-types.sql
           fi
           sha256sum supabase/migrations/*.sql > migration-manifest.txt
       - run: npm ci --prefix tests/harness --ignore-scripts --no-audit --no-fund
