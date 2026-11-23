@@ -43,8 +43,8 @@
   const state={overview:[],requests:[],loaded:false,error:null};
 
   const canRead=()=>typeof profile!=="undefined" && !!profile && typeof canPage==="function" && canPage("imprest");
-  const canFund=()=>canRead() && ["CFO","Supervisor","BankAccountant","APAccountant"].includes(profile.role) && !(typeof isReadonlyViewer==="function"&&isReadonlyViewer());
-  const canRefund=()=>canRead() && ["CFO","Supervisor","BankAccountant"].includes(profile.role) && !(typeof isReadonlyViewer==="function"&&isReadonlyViewer());
+  const canFund=()=>canRead() && hasAnyFinanceRole(["CFO","Supervisor","BankAccountant","APAccountant"]) && !(typeof isReadonlyViewer==="function"&&isReadonlyViewer());
+  const canRefund=()=>canRead() && hasAnyFinanceRole(["CFO","Supervisor","BankAccountant"]) && !(typeof isReadonlyViewer==="function"&&isReadonlyViewer());
   const moneyV=v=>typeof moneyHtml==="function"?moneyHtml(v):Number(v||0).toFixed(2);
   const escV=v=>typeof esc==="function"?esc(v):String(v??"");
   const tx=(ar,en)=>typeof currentLang!=="undefined"&&currentLang==="en"?en:ar;

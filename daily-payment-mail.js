@@ -1,7 +1,7 @@
 /* Delegated mailbox tokens stay in memory. Navigation and preview never send mail. */
 (() => {
  'use strict';const text=(ar,en)=>currentLang==='en'?en:ar;
- const permitted=()=>['Supervisor','BankAccountant'].includes(profile?.role)&&originalCanPage('payments');
+ const permitted=()=>hasAnyFinanceRole(['Supervisor','BankAccountant'])&&originalCanPage('payments');
  const originalCanPage=canPage;
  canPage=function(id){return id==='dailyemail'?permitted():originalCanPage(id);};
  let state={user:null,date:null,preview:null,config:null,auth:null,busy:false,blocked:false,load:0};

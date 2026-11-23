@@ -26,6 +26,7 @@ jobs:
           node tests/daily-payment-mail-api.cjs
           node tests/sla-calendar.cjs
           node tests/sla-calendar-database.cjs
+          node tests/leave-delegation.cjs
           node tests/operations-core.cjs
           node tests/governed-controls-database.cjs
       - name: Browser regression with blocked external requests
@@ -77,6 +78,8 @@ jobs:
             rm tests/payment-restart-reserve-posting.sql
             rm supabase/migrations/20261115075551_payment_operation_types.sql
             rm tests/payment-operation-types.sql
+            rm supabase/migrations/20261123074344_supervisor_leave_delegation_access.sql
+            rm tests/supervisor-leave-delegation.sql
           fi
           sha256sum supabase/migrations/*.sql > migration-manifest.txt
       - run: npm ci --prefix tests/harness --ignore-scripts --no-audit --no-fund

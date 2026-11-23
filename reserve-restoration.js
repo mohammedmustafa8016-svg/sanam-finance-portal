@@ -2,7 +2,7 @@
 (() => {
  'use strict';const text=(ar,en)=>currentLang==='en'?en:ar;
  let state=null;
- const allowed=()=>['Supervisor','BankAccountant'].includes(profile?.role)&&canBankBalances();
+ const allowed=()=>hasAnyFinanceRole(['Supervisor','BankAccountant'])&&canBankBalances();
  function postingFields(destination){
   return `<div class="modal-grid">${select('rrPostingMode',text('أثر الاسترداد على الأرصدة','Restoration balance effect'),[
    {value:'',label:text('حدد أثر الاسترداد','Choose the balance effect')},
